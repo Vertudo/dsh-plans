@@ -65,7 +65,7 @@ function fakeContext(calls, options = {}) {
         return factory()
       },
       register(entry, component) {
-        calls.push(['slot', entry.name, entry.key, typeof entry.inject, typeof component])
+        calls.push(['slot', entry.name, entry.key ?? entry.id, typeof entry.inject, typeof component])
         return () => {}
       },
     },
@@ -92,7 +92,7 @@ function fakeContext(calls, options = {}) {
 test('the shipped bundle declares its module-level services', () => {
   const registered = loadBundle()
   assert.equal(registered.id, 'dsh-plans')
-  assert.deepEqual(Object.keys(registered.exports).sort(), ['PlansPanel', 'TAB_ID', 'apply', 'inject'])
+  assert.deepEqual(Object.keys(registered.exports).sort(), ['PlansPage', 'PlansPanel', 'TAB_ID', 'apply', 'inject'])
   assert.deepEqual(registered.exports.inject, ['locale', 'remote', 'remote.session'])
 })
 
@@ -100,13 +100,18 @@ test('registers the dictionaries and the built-in tab with a guide icon', () => 
   const calls = []
   loadBundle().exports.apply(fakeContext(calls))
 
-  assert.deepEqual(calls.find((call) => call[0] === 'locale'), ['locale', 'dsh-plans', 'en,ru', 19, 19])
+  const locale = calls.find((call) => call[0] === 'locale')
+  assert.deepEqual(locale.slice(0, 3), ['locale', 'dsh-plans', 'en,ru'])
+  assert.equal(locale[3], locale[4], 'both dictionaries carry the same number of keys')
+  assert.ok(locale[3] > 40, 'the dictionaries grew with the page')
   assert.deepEqual(calls.find((call) => call[0] === 'tabtype'), ['tabtype', 'dsh-plans', 'plans', 'extension', 'function', 40, 'function'])
-  assert.deepEqual(calls.find((call) => call[0] === 'slot'), ['slot', 'sidebar.right.pane.tab', 'dsh-plans', 'function', 'function'])
-  assert.deepEqual(calls.filter((call) => call[0] === 'inject').map((call) => call[1]), ['sidebar.right.pane.tab'])
+  assert.deepEqual(calls.find((call) => call[0] === 'slot' && call[1] === 'sidebar.right.pane.tab'), ['slot', 'sidebar.right.pane.tab', 'dsh-plans', 'function', 'function'])
+  assert.deepEqual(calls.find((call) => call[0] === 'slot' && call[1] === 'conversation.view'), ['slot', 'conversation.view', 'plans', 'function', 'function'])
+  assert.deepEqual(calls.filter((call) => call[0] === 'inject').map((call) => call[1]), ['sidebar.right.pane.tab', 'conversation.view'])
   assert.deepEqual(calls.filter((call) => call[0] === 'inject-service').map((call) => call[1]), [
     'sidebarRightTabs,slots,sidebarRight',
     'betterSidebar',
+    'slots',
   ])
   assert.equal(calls.some((call) => call[0] === 'better-tab'), false)
 })

@@ -2,8 +2,10 @@
  * Builds both halves of the bundle with esbuild.
  *
  * The host half is plain ESM. The client half is wrapped in the Web module
- * loader factory so the browser can mount it as a plugin; `react` stays
- * external and comes from the browser module table.
+ * loader factory so the browser can mount it as a plugin; `react` and the
+ * host's shared `ui-primitives` module stay external and come from the browser
+ * module table. The pane's stylesheet travels as a string through the `text`
+ * loader, so the bundle is one JavaScript resource.
  */
 import { build } from 'esbuild'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
@@ -32,7 +34,8 @@ const client = await build({
   format: 'cjs',
   platform: 'browser',
   target: 'es2022',
-  external: ['react', 'react/jsx-runtime'],
+  external: ['react', 'react/jsx-runtime', '@deepseek-ai/dsh-client-ui-primitives'],
+  loader: { '.css': 'text' },
   write: false,
   logLevel: 'silent',
   banner: {

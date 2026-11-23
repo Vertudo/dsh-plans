@@ -1,7 +1,7 @@
 {
   "name": "dsh-plans",
-  "version": "0.1.0",
-  "description": "Plan history for DeepSeek Harness: every plan submitted in the current Session, newest first, in the right sidebar.",
+  "version": "0.2.0",
+  "description": "Plan history for DeepSeek Harness: every plan submitted in the current Session — in the right sidebar and on a page beside Chat.",
   "icon": "icon.svg",
   "type": "module",
   "main": "lib/index.js",
@@ -28,7 +28,7 @@
     "build": "node scripts/build.mjs",
     "check:dist": "node scripts/build.mjs --check",
     "check:hygiene": "node scripts/check-source.mjs",
-    "test": "node --test",
+    "test": "node --test --test-isolation=none",
     "verify": "npm run check:hygiene && npm test && npm run check:dist"
   },
   "keywords": [
@@ -59,6 +59,7 @@
       "inject": [
         "@deepseek-ai/dsh-api-remotes",
         "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-conversation",
         "@deepseek-ai/dsh-client-ui-sidebar-right",
         "@deepseek-ai/dsh-api-session-controller"
       ],
