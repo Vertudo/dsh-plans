@@ -28,7 +28,7 @@
     "build": "node scripts/build.mjs",
     "check:dist": "node scripts/build.mjs --check",
     "check:hygiene": "node scripts/check-source.mjs",
-    "test": "node --test --test-isolation=none",
+    "test": "node --test --experimental-test-isolation=none",
     "verify": "npm run check:hygiene && npm test && npm run check:dist"
   },
   "keywords": [
