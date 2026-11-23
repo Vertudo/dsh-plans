@@ -8,12 +8,13 @@
  * - `dsh-better-sidebar` (`ctx.betterSidebar.registerTab`), which draws its own
  *   column and calls the tab component with a Session `scope`.
  *
- * Registration and data access are kept apart on purpose. Registering the tab
- * needs only `locale` (plus `betterSidebar` in that registry), so the pane is
- * always there. Reading the Session needs the `remote` service, which is resolved
- * at call time through the safe `ctx.get` accessor: the cordis proxy refuses
- * service reads without an `inject` scope, and rendering happens outside one.
- * When the remote is missing the pane says so instead of vanishing.
+ * Cordis reads a service only where that service is declared, and a mounted
+ * remote namespace counts as a service under its dotted name: `remote.session`
+ * is mounted at runtime by the session controller, so it is declared here as a
+ * dotted name. With it declared, `apply` can capture the namespace the way the
+ * shipped plan package does (`planResourceProvider(ctx.remote.session)`); every
+ * other service is declared by the `ctx.inject` block that registers a tab.
+ * Values are captured, never reached through `ctx` from a component.
  */
 import { createElement as h, useCallback, useEffect, useState } from 'react'
 import { planAddress } from '../plans/log.js'
@@ -26,7 +27,7 @@ const BETTER_TAB_ID = 'dsh-plans:plans'
 const NS = 'dsh-plans'
 const ICON = '📋'
 
-export const inject = []
+export const inject = ['locale', 'remote.session']
 
 const STYLE = {
   root: { display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', height: '100%', boxSizing: 'border-box', overflowY: 'auto', color: 'inherit', fontSize: '13px' },
@@ -45,11 +46,6 @@ const STYLE = {
   error: { margin: 0, padding: '8px', border: '1px dashed currentColor', borderRadius: '8px' },
 }
 
-/** The tab glyph, shared by both registries. */
-function iconFor(size = 16) {
-  return h('span', { style: { fontSize: `${size}px`, lineHeight: 1 }, 'aria-hidden': 'true' }, ICON)
-}
-
 /** Reads a value, returning `undefined` when cordis refuses the access. */
 function attempt(fn) {
   try {
@@ -57,6 +53,11 @@ function attempt(fn) {
   } catch {
     return undefined
   }
+}
+
+/** The tab glyph, shared by both registries. */
+function iconFor(size = 16) {
+  return h('span', { style: { fontSize: `${size}px`, lineHeight: 1 }, 'aria-hidden': 'true' }, ICON)
 }
 
 function statusLabel(status, t) {
@@ -77,10 +78,10 @@ function timeLabel(time) {
 
 export function PlansPanel(props) {
   const { t, sessionId, readPlans, openPlan } = props
-  const [attempt, setAttempt] = useState(0)
+  const [attemptCount, setAttemptCount] = useState(0)
   const [expanded, setExpanded] = useState(null)
   const [state, setState] = useState({ status: 'loading', plans: [], error: undefined })
-  const refresh = useCallback(() => setAttempt((value) => value + 1), [])
+  const refresh = useCallback(() => setAttemptCount((value) => value + 1), [])
 
   useEffect(() => {
     if (typeof sessionId !== 'string' || sessionId === '' || typeof readPlans !== 'function') {
@@ -102,7 +103,7 @@ export function PlansPanel(props) {
       alive = false
       controller.abort()
     }
-  }, [sessionId, readPlans, attempt])
+  }, [sessionId, readPlans, attemptCount])
 
   const rows = state.plans.map((plan) => {
     const open = expanded === plan.callId
@@ -170,29 +171,23 @@ export function PlansPanel(props) {
 }
 
 export function apply(ctx) {
-  // Cordis allows a service read only in the plugin's own apply context, never
-  // from a component that renders later. Capturing the values here is what the
-  // shipped plan package does with `planResourceProvider(ctx.remote.session)`.
+  // `remote` is declared for this module, so this read is allowed here — and only
+  // here: a component rendering later must receive the value, not the service.
   const sessionRemote = attempt(() => ctx.remote.session)
-  const openResource = attempt(() => {
-    const sidebarRight = ctx.sidebarRight
-    return typeof sidebarRight.openResource === 'function' ? sidebarRight.openResource.bind(sidebarRight) : undefined
-  })
 
   const readPlansWith = (sessionId) => (signal) => (sessionRemote === undefined
     ? Promise.reject(new Error('the session remote is unavailable'))
     : readSessionPlans(sessionRemote, sessionId, signal))
 
-  const openPlanWith = (sessionId) => (callId) => {
+  const openPlanWith = (openResource, sessionId) => (callId) => {
     if (openResource !== undefined) openResource(planAddress(sessionId, callId))
   }
 
-  ctx.inject(['locale'], (scoped) => {
-    scoped.effect(() => scoped.locale.register(NS, { en, ru }), 'dsh-plans: dictionaries')
-  })
+  ctx.effect(() => ctx.locale.register(NS, { en, ru }), 'dsh-plans: dictionaries')
+  const t = ctx.locale.bind(NS)
 
-  ctx.inject(['locale', 'sidebarRightTabs', 'slots'], (scoped) => {
-    const t = scoped.locale.bind(NS)
+  ctx.inject(['sidebarRightTabs', 'slots', 'sidebarRight'], (scoped) => {
+    const openResource = attempt(() => scoped.sidebarRight.openResource.bind(scoped.sidebarRight))
 
     scoped.effect(() => scoped.sidebarRightTabs.register({
       id: TAB_ID,
@@ -216,14 +211,17 @@ export function apply(ctx) {
         return {
           sessionId,
           readPlans: readPlansWith(sessionId),
-          openPlan: openPlanWith(sessionId),
+          openPlan: openPlanWith(openResource, sessionId),
         }
       },
     }, PlansPanel)), 'dsh-plans: tab body')
   })
 
-  ctx.inject(['locale', 'betterSidebar'], (scoped) => {
-    const t = scoped.locale.bind(NS)
+  ctx.inject(['betterSidebar'], (scoped) => {
+    const openResource = attempt(() => {
+      const sidebarRight = scoped.get('sidebarRight')
+      return typeof sidebarRight?.openResource === 'function' ? sidebarRight.openResource.bind(sidebarRight) : undefined
+    })
 
     scoped.effect(() => scoped.betterSidebar.registerTab({
       id: BETTER_TAB_ID,
@@ -237,7 +235,7 @@ export function apply(ctx) {
           t,
           sessionId,
           readPlans: readPlansWith(sessionId),
-          openPlan: openPlanWith(sessionId),
+          openPlan: openPlanWith(openResource, sessionId),
         })
       },
     }), 'dsh-plans: better-sidebar tab')

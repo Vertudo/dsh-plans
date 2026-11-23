@@ -3,8 +3,9 @@
  * it must register the dictionaries, the built-in right-Sidebar tab, and a tab
  * in `dsh-better-sidebar` when that service is present.
  *
- * Services are read inside `apply` (the only context where cordis allows it) and
- * captured; the tab must register even when the Session remote is missing.
+ * `locale` and `remote` are declared for the module; the tab registries declare
+ * their own services. The tab must still appear when the Session remote is
+ * missing — only reading may fail then.
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -36,7 +37,7 @@ function loadBundle() {
 }
 
 function fakeContext(calls, options = {}) {
-  const available = new Set(['locale', 'slots', 'sidebarRightTabs'])
+  const available = new Set(['locale', 'sidebarRightTabs', 'slots', 'sidebarRight'])
   if (options.betterSidebar === true) available.add('betterSidebar')
   const ctx = {
     effect(fn, label) {
@@ -46,6 +47,10 @@ function fakeContext(calls, options = {}) {
     inject(services, callback) {
       calls.push(['inject-service', services.join(',')])
       if (services.every((service) => available.has(service))) callback(ctx)
+    },
+    get(name) {
+      calls.push(['get', name])
+      return name === 'sidebarRight' && options.noRemote !== true ? ctx.sidebarRight : undefined
     },
     locale: {
       register(namespace, dictionaries) {
@@ -79,18 +84,16 @@ function fakeContext(calls, options = {}) {
   }
   if (options.noRemote !== true) {
     ctx.remote = { session: { events: async () => ({ ok: true, value: { cursor: 1, hasMore: false, records: [] } }) } }
-  }
-  if (options.noRemote !== true) {
     ctx.sidebarRight = { openResource: (address) => calls.push(['open', address]) }
   }
   return ctx
 }
 
-test('the shipped bundle mounts without hard service dependencies', () => {
+test('the shipped bundle declares its module-level services', () => {
   const registered = loadBundle()
   assert.equal(registered.id, 'dsh-plans')
   assert.deepEqual(Object.keys(registered.exports).sort(), ['PlansPanel', 'TAB_ID', 'apply', 'inject'])
-  assert.deepEqual(registered.exports.inject, [])
+  assert.deepEqual(registered.exports.inject, ['locale', 'remote.session'])
 })
 
 test('registers the dictionaries and the built-in tab with a guide icon', () => {
@@ -102,9 +105,8 @@ test('registers the dictionaries and the built-in tab with a guide icon', () => 
   assert.deepEqual(calls.find((call) => call[0] === 'slot'), ['slot', 'sidebar.right.pane.tab', 'dsh-plans', 'function', 'function'])
   assert.deepEqual(calls.filter((call) => call[0] === 'inject').map((call) => call[1]), ['sidebar.right.pane.tab'])
   assert.deepEqual(calls.filter((call) => call[0] === 'inject-service').map((call) => call[1]), [
-    'locale',
-    'locale,sidebarRightTabs,slots',
-    'locale,betterSidebar',
+    'sidebarRightTabs,slots,sidebarRight',
+    'betterSidebar',
   ])
   assert.equal(calls.some((call) => call[0] === 'better-tab'), false)
 })
