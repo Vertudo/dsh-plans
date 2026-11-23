@@ -87,9 +87,8 @@ function fakeContext(calls, options = {}) {
 test('the shipped bundle mounts without hard service dependencies', () => {
   const registered = loadBundle()
   assert.equal(registered.id, 'dsh-plans')
-  assert.deepEqual(Object.keys(registered.exports).sort(), ['PlanIcon', 'PlansPanel', 'TAB_ID', 'apply', 'inject'])
+  assert.deepEqual(Object.keys(registered.exports).sort(), ['PlansPanel', 'TAB_ID', 'apply', 'inject'])
   assert.deepEqual(registered.exports.inject, [])
-  assert.equal(typeof registered.exports.PlanIcon, 'function')
 })
 
 test('registers the dictionaries and the built-in tab with a guide icon', () => {

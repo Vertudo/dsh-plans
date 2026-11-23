@@ -8,11 +8,11 @@
  * - `dsh-better-sidebar` (`ctx.betterSidebar.registerTab`), which draws its own
  *   column and calls the tab component with a Session `scope`.
  *
- * The plugin declares no hard service dependencies: each block below runs when
- * its own services appear, so a profile without one of them still activates the
- * plugin instead of leaving the entry waiting. Services are read inside the
- * block and captured in closures — touching `ctx.<service>` later from a
- * component would fail with "cannot get property without inject".
+ * Cordis reads: a service may be touched only while the `inject` scope that
+ * declares it is current, and a nested path such as `remote.session` is guarded
+ * the same way. Rendering happens later, from a component, so every value the
+ * component needs is captured inside its block — the nested service, and bound
+ * methods — instead of being reached through `ctx` at render time.
  */
 import { createElement as h, useCallback, useEffect, useState } from 'react'
 import { planAddress } from '../plans/log.js'
@@ -23,6 +23,7 @@ export const TAB_ID = 'dsh-plans'
 const TAB_KIND = 'plans'
 const BETTER_TAB_ID = 'dsh-plans:plans'
 const NS = 'dsh-plans'
+const ICON = '📋'
 
 export const inject = []
 
@@ -43,22 +44,9 @@ const STYLE = {
   error: { margin: 0, padding: '8px', border: '1px dashed currentColor', borderRadius: '8px' },
 }
 
-/** A plan glyph: lines of a document with the review dot. */
-export function PlanIcon({ size = 16 } = {}) {
-  return h('svg', {
-    width: size,
-    height: size,
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: 2,
-    strokeLinecap: 'round',
-    'aria-hidden': 'true',
-  },
-    h('path', { key: 'a', d: 'M5 4h14v16H5z', rx: 2 }),
-    h('path', { key: 'b', d: 'M9 9h6M9 13h6M9 17h3' }),
-    h('circle', { key: 'c', cx: 17, cy: 17, r: 2, fill: 'currentColor', stroke: 'none' }),
-  )
+/** The tab glyph, shared by both registries. */
+function iconFor(size = 16) {
+  return h('span', { style: { fontSize: `${size}px`, lineHeight: 1 }, 'aria-hidden': 'true' }, ICON)
 }
 
 function statusLabel(status, t) {
@@ -178,8 +166,8 @@ export function apply(ctx) {
 
   ctx.inject(['locale', 'sidebarRightTabs', 'slots', 'remote', 'sidebarRight'], (scoped) => {
     const t = scoped.locale.bind(NS)
-    const remote = scoped.remote
-    const sidebarRight = scoped.sidebarRight
+    const sessionRemote = scoped.remote.session
+    const openResource = scoped.sidebarRight.openResource.bind(scoped.sidebarRight)
 
     scoped.effect(() => scoped.sidebarRightTabs.register({
       id: TAB_ID,
@@ -190,7 +178,7 @@ export function apply(ctx) {
         order: 40,
         title: () => t('guide.title'),
         description: () => t('guide.description'),
-        icon: (size) => h(PlanIcon, { size: size ?? 16 }),
+        icon: iconFor,
       },
     }), 'dsh-plans: tab type')
 
@@ -202,8 +190,8 @@ export function apply(ctx) {
         const sessionId = typeof owner === 'string' ? owner : owner?.sessionId
         return {
           sessionId,
-          readPlans: (signal) => readSessionPlans(remote.session, sessionId, signal),
-          openPlan: (callId) => sidebarRight.openResource(planAddress(sessionId, callId)),
+          readPlans: (signal) => readSessionPlans(sessionRemote, sessionId, signal),
+          openPlan: (callId) => openResource(planAddress(sessionId, callId)),
         }
       },
     }, PlansPanel)), 'dsh-plans: tab body')
@@ -211,23 +199,23 @@ export function apply(ctx) {
 
   ctx.inject(['locale', 'betterSidebar', 'remote'], (scoped) => {
     const t = scoped.locale.bind(NS)
-    const remote = scoped.remote
+    const sessionRemote = scoped.remote.session
     const sidebarRight = typeof scoped.get === 'function' ? scoped.get('sidebarRight') : undefined
+    const openResource = sidebarRight === undefined ? undefined : sidebarRight.openResource.bind(sidebarRight)
 
     scoped.effect(() => scoped.betterSidebar.registerTab({
       id: BETTER_TAB_ID,
-      // A plain string: the registry stores the tab title as text, it does not
-      // call a function for the chip. Locale switching needs a re-registration.
+      // A plain string: the registry stores the chip title as text.
       title: t('tab.title'),
       description: () => t('guide.description'),
-      icon: (size) => h(PlanIcon, { size: size ?? 16 }),
+      icon: iconFor,
       component: (props) => {
         const sessionId = props?.scope?.sessionId
         return h(PlansPanel, {
           t,
           sessionId,
-          readPlans: (signal) => readSessionPlans(remote.session, sessionId, signal),
-          openPlan: sidebarRight === undefined ? undefined : (callId) => sidebarRight.openResource(planAddress(sessionId, callId)),
+          readPlans: (signal) => readSessionPlans(sessionRemote, sessionId, signal),
+          openPlan: openResource === undefined ? undefined : (callId) => openResource(planAddress(sessionId, callId)),
         })
       },
     }), 'dsh-plans: better-sidebar tab')

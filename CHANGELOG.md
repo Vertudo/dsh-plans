@@ -1,9 +1,14 @@
 # Changelog
 
+## 0.2.3
+
+- Fixes `dsh-better-sidebar: cannot get property "remote.session" without inject`: a nested service path is guarded like the service itself, so `remote.session` and `sidebarRight.openResource` are now read inside the `inject` scope and captured as plain values and bound methods for later use by the component.
+- The tab icon is the 📋 emoji, used by both registries (the better-sidebar chip and the built-in guide tile).
+
 ## 0.2.2
 
 - Fixes `dsh-better-sidebar: cannot get property "remote" without inject` when the tab opens: the services are read inside the `ctx.inject` block and captured in closures instead of being touched on the raw context.
-- The tab now carries an icon (a plan glyph) and a description, so it no longer shows as an empty tile in the better-sidebar guide and chip.
+- The tab now carries an icon and a description, so it no longer shows as an empty tile in the better-sidebar guide and chip.
 - The better-sidebar title is a plain string, because that registry stores the chip text rather than calling a getter.
 
 ## 0.2.1
