@@ -93,7 +93,7 @@ test('the shipped bundle declares its module-level services', () => {
   const registered = loadBundle()
   assert.equal(registered.id, 'dsh-plans')
   assert.deepEqual(Object.keys(registered.exports).sort(), ['PlansPanel', 'TAB_ID', 'apply', 'inject'])
-  assert.deepEqual(registered.exports.inject, ['locale', 'remote.session'])
+  assert.deepEqual(registered.exports.inject, ['locale', 'remote', 'remote.session'])
 })
 
 test('registers the dictionaries and the built-in tab with a guide icon', () => {

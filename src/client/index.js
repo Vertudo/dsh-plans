@@ -9,9 +9,10 @@
  *   column and calls the tab component with a Session `scope`.
  *
  * Cordis reads a service only where that service is declared, and a mounted
- * remote namespace counts as a service under its dotted name: `remote.session`
- * is mounted at runtime by the session controller, so it is declared here as a
- * dotted name. With it declared, `apply` can capture the namespace the way the
+ * remote namespace counts as a service under its dotted name, and the parent
+ * service must be declared with it: the shipped plan package declares both
+ * `remote` and `remote.session`. The namespace itself is mounted at runtime by
+ * the session controller. With both declared, `apply` can capture it the way the
  * shipped plan package does (`planResourceProvider(ctx.remote.session)`); every
  * other service is declared by the `ctx.inject` block that registers a tab.
  * Values are captured, never reached through `ctx` from a component.
@@ -27,7 +28,7 @@ const BETTER_TAB_ID = 'dsh-plans:plans'
 const NS = 'dsh-plans'
 const ICON = '📋'
 
-export const inject = ['locale', 'remote.session']
+export const inject = ['locale', 'remote', 'remote.session']
 
 const STYLE = {
   root: { display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', height: '100%', boxSizing: 'border-box', overflowY: 'auto', color: 'inherit', fontSize: '13px' },
