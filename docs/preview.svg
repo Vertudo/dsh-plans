@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="300" viewBox="0 0 640 300" role="img" aria-label="Plans pane beside a conversation">
+  <rect x="0" y="0" width="640" height="300" fill="#ffffff"/>
+  <rect x="32" y="32" width="372" height="236" rx="14" fill="#f4f5f7"/>
+  <rect x="58" y="62" width="250" height="12" rx="6" fill="#c9ccd3"/>
+  <rect x="58" y="94" width="318" height="8" rx="4" fill="#dcdfe5"/>
+  <rect x="58" y="112" width="286" height="8" rx="4" fill="#dcdfe5"/>
+  <rect x="58" y="130" width="300" height="8" rx="4" fill="#dcdfe5"/>
+  <rect x="58" y="166" width="318" height="8" rx="4" fill="#dcdfe5"/>
+  <rect x="58" y="184" width="230" height="8" rx="4" fill="#dcdfe5"/>
+  <rect x="424" y="32" width="184" height="236" rx="14" fill="#ffffff" stroke="#d5d8de" stroke-width="2"/>
+  <rect x="442" y="50" width="70" height="12" rx="6" fill="#2d3142"/>
+  <rect x="442" y="80" width="148" height="44" rx="8" fill="none" stroke="#2d3142" stroke-width="2"/>
+  <circle cx="458" cy="94" r="4" fill="#2f9e6f"/>
+  <rect x="472" y="90" width="96" height="8" rx="4" fill="#2d3142"/>
+  <rect x="452" y="108" width="72" height="7" rx="3.5" fill="#9aa0ab"/>
+  <rect x="442" y="134" width="148" height="44" rx="8" fill="none" stroke="#b9bec7" stroke-width="2"/>
+  <circle cx="458" cy="148" r="4" fill="#c9861f"/>
+  <rect x="472" y="144" width="82" height="8" rx="4" fill="#5b616e"/>
+  <rect x="452" y="162" width="64" height="7" rx="3.5" fill="#9aa0ab"/>
+  <rect x="442" y="188" width="148" height="44" rx="8" fill="none" stroke="#b9bec7" stroke-width="2"/>
+  <circle cx="458" cy="202" r="4" fill="#8b8f98"/>
+  <rect x="472" y="198" width="90" height="8" rx="4" fill="#5b616e"/>
+  <rect x="452" y="216" width="58" height="7" rx="3.5" fill="#9aa0ab"/>
+</svg>

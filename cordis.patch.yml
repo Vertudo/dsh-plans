@@ -1,0 +1,7 @@
+# Adds the plans panel row to the profile.
+#
+# The id is also the key the Loader uses for this plugin's configuration
+# and the name the settings surface addresses; renaming it detaches both.
+- insert:
+    - id: plans
+      name: dsh-plans

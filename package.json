@@ -1,0 +1,70 @@
+{
+  "name": "dsh-plans",
+  "version": "0.1.0",
+  "description": "Plan history for DeepSeek Harness: every plan submitted in the current Session, newest first, in the right sidebar.",
+  "icon": "icon.svg",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "LICENSE",
+    "README.md",
+    "README.ru.md",
+    "CHANGELOG.md",
+    "SECURITY.md",
+    "icon.svg",
+    "docs",
+    "locale",
+    "cordis.patch.yml",
+    "lib"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check:dist": "node scripts/build.mjs --check",
+    "check:hygiene": "node scripts/check-source.mjs",
+    "test": "node --test",
+    "verify": "npm run check:hygiene && npm test && npm run check:dist"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "plan-mode",
+    "sidebar",
+    "plans"
+  ],
+  "license": "MIT",
+  "author": "Vertudo",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Vertudo/dsh-plans.git"
+  },
+  "homepage": "https://github.com/Vertudo/dsh-plans#readme",
+  "bugs": {
+    "url": "https://github.com/Vertudo/dsh-plans/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-api-remotes",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-sidebar-right"
+      ],
+      "platform": "web"
+    }
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}
