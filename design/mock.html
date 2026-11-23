@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dsh-plans — макет панели и страницы</title>
+<style>
+  /* Значения токенов взяты из темы DSH 0.2.2-rc.5
+     (dsh-client-ui-theme/src/styles/design-platform.css). */
+  :root {
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --dur: 140ms;
+    --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  html[data-theme="light"] {
+    --bg-base: #ffffff;
+    --card: #fafafa;
+    --card-hover: #f2f3f5;
+    --border-l1: rgba(0, 0, 0, 0.04);
+    --border-l2: rgba(0, 0, 0, 0.10);
+    --border-l3: rgba(0, 0, 0, 0.12);
+    --label1: #0f1115;
+    --label2: #61666b;
+    --label3: #81858c;
+    --ok: #22c55e;
+    --warn: #f59e0b;
+    --err: #ec1313;
+    --idle: #c9ccd2;
+    --hover: rgba(38, 49, 72, 0.06);
+    --skeleton: rgba(0, 0, 0, 0.04);
+    --link: #4176e6;
+    --shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+    --frame: #eef0f3;
+  }
+  html[data-theme="dark"] {
+    --bg-base: #151517;
+    --card: #212123;
+    --card-hover: #2a2a2d;
+    --border-l1: rgba(255, 255, 255, 0.06);
+    --border-l2: rgba(255, 255, 255, 0.12);
+    --border-l3: rgba(255, 255, 255, 0.16);
+    --label1: #f9fafb;
+    --label2: #cfd3d6;
+    --label3: #adb2b8;
+    --ok: #22c55e;
+    --warn: #f59e0b;
+    --err: #f25a5a;
+    --idle: #545557;
+    --hover: rgba(255, 255, 255, 0.08);
+    --skeleton: rgba(255, 255, 255, 0.08);
+    --link: #7aaaff;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --frame: #0f0f10;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--frame);
+    color: var(--label1);
+    font-family: var(--font);
+    font-size: 13px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    padding: 20px;
+  }
+  .toolbar {
+    display: flex; align-items: center; gap: 12px;
+    margin: 0 0 16px; font-size: 12px; color: var(--label3);
+  }
+  .toolbar strong { color: var(--label2); font-weight: 600; }
+  .segmented {
+    display: inline-flex; padding: 2px; gap: 2px;
+    border: 1px solid var(--border-l2); border-radius: 999px; background: var(--card);
+  }
+  .segmented button {
+    border: 0; background: transparent; color: var(--label2);
+    font: inherit; font-size: 11.5px; padding: 3px 10px; border-radius: 999px; cursor: pointer;
+  }
+  .segmented button[aria-pressed="true"] { background: var(--label1); color: var(--bg-base); }
+  .caption { font-size: 11.5px; color: var(--label3); margin: 0 0 8px; }
+  .shots { display: flex; flex-direction: column; gap: 28px; align-items: flex-start; }
+  .shot { display: block; }
+
+  /* ─── корень обеих поверхностей ─────────────────────────────────────── */
+  .plans { color: var(--label1); font-family: var(--font); }
+  .plans-frame {
+    width: 400px; height: 860px; overflow: hidden;
+    background: var(--bg-base); border: 1px solid var(--border-l2);
+    border-radius: 14px; box-shadow: var(--shadow);
+  }
+  .plans-frame--page { width: 1440px; height: auto; }
+  .plans-frame--state { width: 400px; height: 300px; }
+
+  /* ─── шапка панели ──────────────────────────────────────────────────── */
+  .plans-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 12px 12px 10px;
+  }
+  .plans-title {
+    margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0;
+    display: inline-flex; align-items: center; gap: 6px; min-width: 0;
+  }
+  .plans-title span {
+    font-size: 11px; font-weight: 500; color: var(--label3);
+    border: 1px solid var(--border-l2); border-radius: 999px;
+    padding: 0 6px; line-height: 16px; font-variant-numeric: tabular-nums;
+  }
+  .icon-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; padding: 0; border: 0; border-radius: var(--radius-sm);
+    background: transparent; color: var(--label3); cursor: pointer;
+    transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+  }
+  .icon-btn:hover { background: var(--hover); color: var(--label1); }
+
+  /* ─── сводка ────────────────────────────────────────────────────────── */
+  .summary { padding: 0 12px 10px; }
+  .bar {
+    display: flex; gap: 2px; height: 6px; border-radius: 999px;
+    overflow: hidden; background: var(--border-l1);
+  }
+  .bar i { display: block; height: 100%; }
+  .bar .s-ok { background: var(--ok); }
+  .bar .s-warn { background: var(--warn); }
+  .bar .s-dismissed { background: var(--idle); }
+  .bar .s-unknown { background: var(--border-l3); }
+  .kpis {
+    list-style: none; margin: 8px 0 0; padding: 0;
+    display: flex; flex-wrap: wrap; gap: 4px 14px;
+  }
+  .kpis li { display: inline-flex; align-items: baseline; gap: 5px; font-size: 11.5px; color: var(--label3); }
+  .kpis b { font-size: 12px; font-weight: 600; color: var(--label1); font-variant-numeric: tabular-nums; }
+  .legend-dot { width: 6px; height: 6px; border-radius: 999px; display: inline-block; }
+  .legend-dot.ok { background: var(--ok); }
+  .legend-dot.warn { background: var(--warn); }
+  .legend-dot.dismissed { background: var(--idle); }
+  .legend-dot.unknown { background: var(--border-l3); }
+
+  /* ─── фильтры ───────────────────────────────────────────────────────── */
+  .filters {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    padding: 0 12px 10px;
+  }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    height: 24px; padding: 0 9px; border-radius: 999px;
+    border: 1px solid var(--border-l2); background: transparent;
+    color: var(--label2); font: inherit; font-size: 11.5px; cursor: pointer;
+    transition: background var(--dur) var(--ease), color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  }
+  .chip span { color: var(--label3); font-variant-numeric: tabular-nums; }
+  .chip:hover { background: var(--hover); }
+  .chip[aria-pressed="true"] { background: var(--label1); border-color: var(--label1); color: var(--bg-base); }
+  .chip[aria-pressed="true"] span { color: inherit; opacity: 0.7; }
+
+  /* ─── список планов ─────────────────────────────────────────────────── */
+  .list { list-style: none; margin: 0; padding: 0 12px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .plan {
+    background: var(--card); border: 1px solid var(--border-l2);
+    border-radius: 10px; box-shadow: var(--shadow); overflow: hidden;
+    transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+  }
+  .plan:hover { background: var(--card-hover); }
+  .plan--open { background: var(--card); border-color: var(--border-l3); }
+  .plan-head {
+    display: flex; align-items: flex-start; gap: 9px; width: 100%;
+    padding: 10px 11px; border: 0; background: transparent; color: inherit;
+    font: inherit; text-align: left; cursor: pointer;
+  }
+  .plan-dot { flex: none; width: 8px; height: 8px; margin-top: 5px; border-radius: 999px; }
+  .plan-dot.ok { background: var(--ok); }
+  .plan-dot.warn { background: var(--warn); }
+  .plan-dot.dismissed { background: var(--idle); }
+  .plan-dot.unknown { background: var(--border-l3); }
+  .plan-main { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .plan-name {
+    font-size: 12.8px; font-weight: 600; line-height: 1.35; color: var(--label1);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .plan-meta {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 5px;
+    font-size: 11.2px; color: var(--label3); font-variant-numeric: tabular-nums;
+  }
+  .plan-meta .sep { color: var(--border-l3); }
+  .plan-meta .outcome-ok { color: var(--ok); }
+  .plan-meta .outcome-warn { color: var(--warn); }
+  .chevron { flex: none; width: 14px; height: 14px; margin-top: 3px; color: var(--label3); transition: transform var(--dur) var(--ease); }
+  .plan--open .chevron { transform: rotate(180deg); }
+
+  .plan-body { padding: 0 11px 11px; }
+  .plan-body > * + * { margin-top: 9px; }
+  .feedback {
+    border-left: 2px solid var(--warn); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    background: color-mix(in srgb, var(--warn) 9%, transparent);
+    padding: 7px 9px; font-size: 11.8px; color: var(--label2);
+  }
+  .feedback b { display: block; font-size: 10.8px; font-weight: 600; color: var(--label2); opacity: 0.8; margin-bottom: 2px; }
+
+  /* markdown плана в раскрытии */
+  .doc {
+    font-size: 12.4px; line-height: 1.6; color: var(--label2);
+    max-height: 300px; overflow: auto;
+    border-top: 1px solid var(--border-l1); padding-top: 9px;
+  }
+  .doc h2 { font-size: 13px; font-weight: 600; color: var(--label1); margin: 12px 0 5px; }
+  .doc h2:first-child { margin-top: 0; }
+  .doc h3 { font-size: 12.4px; font-weight: 600; color: var(--label1); margin: 10px 0 4px; }
+  .doc p { margin: 0 0 7px; }
+  .doc ul { margin: 0 0 7px; padding-left: 16px; }
+  .doc li { margin: 1px 0; }
+  .doc code { font-family: var(--mono); font-size: 11.4px; background: var(--hover); border-radius: 4px; padding: 1px 4px; color: var(--label1); }
+  .doc pre {
+    margin: 0 0 8px; padding: 8px 10px; overflow: auto;
+    background: color-mix(in srgb, var(--label1) 7%, transparent);
+    border: 1px solid var(--border-l1); border-radius: var(--radius-md);
+  }
+  .doc pre code { background: none; padding: 0; font-size: 11.3px; line-height: 1.5; }
+  .doc table { width: 100%; border-collapse: collapse; margin: 0 0 8px; font-size: 11.6px; }
+  .doc th { text-align: left; font-weight: 600; color: var(--label3); font-size: 11px; padding: 4px 6px; border-bottom: 1px solid var(--border-l2); }
+  .doc td { padding: 4px 6px; border-bottom: 1px solid var(--border-l1); vertical-align: top; }
+
+  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 26px; padding: 0 10px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border-l2); background: var(--card);
+    color: var(--label1); font: inherit; font-size: 11.8px; cursor: pointer;
+    transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  }
+  .btn:hover { background: var(--card-hover); border-color: var(--border-l3); }
+  .btn--quiet { border-color: transparent; background: transparent; color: var(--link); padding: 0 4px; }
+  .btn--quiet:hover { background: var(--hover); border-color: transparent; }
+
+  /* ─── страница ──────────────────────────────────────────────────────── */
+  .page { padding: 18px 22px 26px; }
+  .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+  .page-title { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: 0; }
+  .page-sub { margin: 2px 0 0; font-size: 12px; color: var(--label3); }
+  .page-actions { display: flex; align-items: center; gap: 8px; }
+  .page-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+  .page-list .filters { padding: 0 0 10px; }
+  .page-list .list { padding: 0; }
+  .side { position: sticky; top: 12px; display: flex; flex-direction: column; gap: 12px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border-l2);
+    border-radius: var(--radius-lg); padding: 12px 13px; box-shadow: var(--shadow);
+  }
+  .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
+  .card-title { font-size: 12.5px; font-weight: 600; color: var(--label1); }
+  .card-note { font-size: 11px; color: var(--label3); font-variant-numeric: tabular-nums; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .tile { border: 1px solid var(--border-l1); border-radius: var(--radius-md); padding: 7px 9px; }
+  .tile b { display: block; font-size: 19px; font-weight: 600; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .tile span { font-size: 10.8px; color: var(--label3); }
+  .tile--ok b { color: var(--ok); }
+  .tile--warn b { color: var(--warn); }
+  .rows { display: flex; flex-direction: column; }
+  .row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid var(--border-l1); font-size: 11.6px; }
+  .row:first-of-type { border-top: 0; padding-top: 0; }
+  .row dt { color: var(--label3); margin: 0; }
+  .row dd { margin: 0; color: var(--label1); font-variant-numeric: tabular-nums; }
+  .row code { font-family: var(--mono); font-size: 11px; color: var(--label2); }
+  .note { font-size: 11px; color: var(--label3); margin: 9px 0 0; }
+
+  /* ─── состояния ─────────────────────────────────────────────────────── */
+  .state { padding: 0 12px 12px; }
+  .empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 34px 18px; text-align: center; }
+  .empty svg { color: var(--label3); }
+  .empty b { font-size: 12.8px; font-weight: 600; color: var(--label2); }
+  .empty p { margin: 0; font-size: 11.8px; color: var(--label3); max-width: 250px; }
+  .empty code { font-family: var(--mono); font-size: 11.2px; background: var(--hover); border-radius: 4px; padding: 1px 5px; color: var(--label2); }
+  .error-card {
+    border: 1px solid var(--border-l2); border-radius: 10px; padding: 10px 11px;
+    background: var(--card); display: flex; gap: 9px; align-items: flex-start;
+  }
+  .error-card .plan-dot { margin-top: 5px; }
+  .error-card p { margin: 0; font-size: 11.8px; color: var(--label2); }
+  .error-card b { display: block; font-size: 12.4px; color: var(--label1); margin-bottom: 2px; }
+  .skeleton { display: flex; flex-direction: column; gap: 8px; }
+  .sk {
+    border: 1px solid var(--border-l1); border-radius: 10px; padding: 11px;
+    display: flex; flex-direction: column; gap: 7px;
+  }
+  .sk i { display: block; height: 9px; border-radius: 999px; background: var(--skeleton); animation: pulse 1.6s var(--ease) infinite; }
+  .sk i:nth-child(1) { width: 62%; }
+  .sk i:nth-child(2) { width: 38%; height: 7px; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+  @media (prefers-reduced-motion: reduce) {
+    .sk i { animation: none; }
+    .chevron, .plan, .chip, .btn, .icon-btn { transition: none; }
+  }
+
+  /* режим съёмки: показываем одну секцию */
+  body[data-shot="panel"] .shot:not(.shot--panel),
+  body[data-shot="page"] .shot:not(.shot--page),
+  body[data-shot="states"] .shot:not(.shot--states) { display: none; }
+  body[data-shot] .toolbar { display: none; }
+</style>
+</head>
+<body data-shot="all">
+
+<div class="toolbar">
+  <strong>dsh-plans — макет</strong>
+  <div class="segmented" role="group" aria-label="Тема">
+    <button id="theme-light" aria-pressed="true">Светлая</button>
+    <button id="theme-dark" aria-pressed="false">Тёмная</button>
+  </div>
+  <span>токены DSH 0.2.2-rc.5 · панель 400px · страница 1440px</span>
+</div>
+
+<div class="shots">
+
+  <!-- ───────────────────────────── панель ───────────────────────────── -->
+  <section class="shot shot--panel">
+    <p class="caption">Панель в правом сайдбаре: сводка, фильтр, раскрытая карточка с markdown</p>
+    <div class="plans-frame">
+      <div class="plans" data-dsh-plans-panel>
+        <header class="plans-head">
+          <h1 class="plans-title">Планы <span>5</span></h1>
+          <button class="icon-btn" aria-label="Обновить список">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+              <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9"/><path d="M13.5 2.5V5.5H10.5"/>
+            </svg>
+          </button>
+        </header>
+
+        <div class="summary">
+          <div class="bar" role="img" aria-label="Состав: утверждено 2, на доработке 1, отклонено 2">
+            <i class="s-ok" style="flex:2"></i><i class="s-warn" style="flex:1"></i><i class="s-dismissed" style="flex:2"></i>
+          </div>
+          <ul class="kpis">
+            <li><i class="legend-dot ok"></i><b>2</b> утверждено</li>
+            <li><i class="legend-dot warn"></i><b>1</b> на доработке</li>
+            <li><i class="legend-dot dismissed"></i><b>2</b> отклонено</li>
+          </ul>
+        </div>
+
+        <nav class="filters" aria-label="Фильтр по итогу">
+          <button class="chip" aria-pressed="true">Все <span>5</span></button>
+          <button class="chip" aria-pressed="false">Утверждены <span>2</span></button>
+          <button class="chip" aria-pressed="false">Доработка <span>1</span></button>
+          <button class="chip" aria-pressed="false">Отклонены <span>2</span></button>
+        </nav>
+
+        <ol class="list">
+          <li class="plan plan--open">
+            <button class="plan-head" aria-expanded="true">
+              <i class="plan-dot warn"></i>
+              <span class="plan-main">
+                <span class="plan-name">Дизайн панели «Планы»: карточки, страницы и тёмная тема</span>
+                <span class="plan-meta">#5<span class="sep">·</span>сегодня, 12:34<span class="sep">·</span><span class="outcome-warn">Отправлен на доработку</span></span>
+              </span>
+              <svg class="chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5"/></svg>
+            </button>
+            <div class="plan-body">
+              <div class="feedback"><b>Замечания ревью</b>Переделать сводку: нужна полоса состава по итогам, а фильтр по статусу — со счётчиками. Макет показать до правки кода.</div>
+              <div class="doc">
+                <h2>Цель</h2>
+                <p>Заменить нынешний список планов оформлением в языке DSH: карточки, приглушённые подписи, статусные цвета.</p>
+                <h2>Решения</h2>
+                <ul>
+                  <li>Только токены темы — ни одного жёсткого цвета.</li>
+                  <li>Состав планов — одна полоса и три счётчика.</li>
+                  <li>План раскрывается как markdown, а не как <code>&lt;pre&gt;</code>.</li>
+                </ul>
+                <h3>Открытые вопросы</h3>
+                <table>
+                  <tr><th>Вопрос</th><th>Решение</th></tr>
+                  <tr><td>Где страница</td><td>Вкладка рядом с Chat</td></tr>
+                  <tr><td>Живое обновление</td><td>Позже</td></tr>
+                </table>
+              </div>
+              <div class="actions">
+                <button class="btn">Открыть в просмотрщике</button>
+                <button class="btn btn--quiet">Открыть страницу планов</button>
+              </div>
+            </div>
+          </li>
+
+          <li class="plan">
+            <button class="plan-head" aria-expanded="false">
+              <i class="plan-dot ok"></i>
+              <span class="plan-main">
+                <span class="plan-name">Спецификация импорта отчёта брокера «Открытие»</span>
+                <span class="plan-meta">#4<span class="sep">·</span>сегодня, 11:07<span class="sep">·</span><span class="outcome-ok">Утверждён</span></span>
+              </span>
+              <svg class="chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5"/></svg>
+            </button>
+          </li>
+
+          <li class="plan">
+            <button class="plan-head" aria-expanded="false">
+              <i class="plan-dot ok"></i>
+              <span class="plan-main">
+                <span class="plan-name">План миграции MSSQL → PostgreSQL для сервиса позиций</span>
+                <span class="plan-meta">#3<span class="sep">·</span>вчера, 18:12<span class="sep">·</span><span class="outcome-ok">Утверждён</span><span class="sep">·</span>Claude Code</span>
+              </span>
+              <svg class="chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5"/></svg>
+            </button>
+          </li>
+
+          <li class="plan">
+            <button class="plan-head" aria-expanded="false">
+              <i class="plan-dot dismissed"></i>
+              <span class="plan-main">
+                <span class="plan-name">Ревизия документации EFTR.DataFeed.Position</span>
+                <span class="plan-meta">#2<span class="sep">·</span>вчера, 10:41<span class="sep">·</span>Отклонён</span>
+              </span>
+              <svg class="chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5"/></svg>
+            </button>
+          </li>
+
+          <li class="plan">
+            <button class="plan-head" aria-expanded="false">
+              <i class="plan-dot dismissed"></i>
+              <span class="plan-main">
+                <span class="plan-name">Черновик ADR по переводу Kafka-консьюмеров</span>
+                <span class="plan-meta">#1<span class="sep">·</span>20 ноя<span class="sep">·</span>Отклонён</span>
+              </span>
+              <svg class="chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5"/></svg>
+            </button>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────────────── состояния ────────────────────────── -->
+  <section class="shot shot--states">
+    <p class="caption">Состояния панели: загрузка, пусто, ошибка</p>
+    <div style="display:flex; gap:16px; align-items:flex-start;">
+      <div class="plans-frame plans-frame--state">
+        <div class="plans" data-dsh-plans-panel>
+          <header class="plans-head"><h1 class="plans-title">Планы</h1></header>
+          <div class="state">
+            <div class="skeleton">
+              <div class="sk"><i></i><i></i></div>
+              <div class="sk"><i></i><i></i></div>
+              <div class="sk"><i></i><i></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="plans-frame plans-frame--state">
+        <div class="plans" data-dsh-plans-panel>
+          <header class="plans-head"><h1 class="plans-title">Планы <span>0</span></h1></header>
+          <div class="empty">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
+              <rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 8h8M8 12h8M8 16h5"/>
+            </svg>
+            <b>В этой сессии планов ещё не было</b>
+            <p>Войдите в режим плана командой <code>/plan</code> и представьте план на проверку.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="plans-frame plans-frame--state">
+        <div class="plans" data-dsh-plans-panel>
+          <header class="plans-head"><h1 class="plans-title">Планы</h1></header>
+          <div class="state">
+            <div class="error-card">
+              <i class="plan-dot" style="background: var(--err)"></i>
+              <div>
+                <p><b>Не удалось прочитать журнал</b>Служба сессии не отвечает.</p>
+              </div>
+            </div>
+            <div class="actions" style="margin-top:10px;"><button class="btn">Повторить</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────────────── страница ─────────────────────────── -->
+  <section class="shot shot--page">
+    <p class="caption">Страница «Планы»: вкладка рядом с Chat / Trajectory, две колонки</p>
+    <div class="plans-frame plans-frame--page">
+      <div class="plans" data-dsh-plans-page>
+        <div class="page">
+          <header class="page-head">
+            <div>
+              <h1 class="page-title">Планы</h1>
+              <p class="page-sub">Все планы этой сессии, свежие сверху · обновлено 12:40</p>
+            </div>
+            <div class="page-actions">
+              <button class="btn">Обновить</button>
+              <button class="btn btn--quiet">Открыть в панели</button>
+            </div>
+          </header>
+
+          <div class="page-grid">
+            <main class="page-list">
+              <nav class="filters" aria-label="Фильтр по итогу">
+                <button class="chip" aria-pressed="true">Все <span>5</span></button>
+                <button class="chip" aria-pressed="false">Утверждены <span>2</span></button>
+                <button class="chip" aria-pressed="false">Доработка <span>1</span></button>
+                <button class="chip" aria-pressed="false">Отклонены <span>2</span></button>
+              </nav>
+
+              <ol class="list">
+                <li class="plan plan--open">
+                  <button class="plan-head" aria-expanded="true">
+                    <i class="plan-dot warn"></i>
+                    <span class="plan-main">
+                      <span class="plan-name">Дизайн панели «Планы»: карточки, страницы и тёмная тема</span>
+                      <span class="plan-meta">#5<span class="sep">·</span>сегодня, 12:34<span class="sep">·</span><span class="outcome-warn">Отправлен на доработку</span><span class="sep">·</span>4 раздела</span>
+                    </span>
+                    <svg class="chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5"/></svg>
+                  </button>
+                  <div class="plan-body">
+                    <div class="feedback"><b>Замечания ревью</b>Переделать сводку: нужна полоса состава по итогам, а фильтр по статусу — со счётчиками. Макет показать до правки кода.</div>
+                    <div class="doc" style="max-height:none">
+                      <h2>Цель</h2>
+                      <p>Заменить нынешний список планов оформлением в языке DSH и добавить вторую поверхность — страницу на всю ширину: сводка по итогам, фильтр и раскрытый план.</p>
+                      <h2>Решения по дизайну</h2>
+                      <ul>
+                        <li>Только токены темы <code>--dsw-alias-*</code>: светлая и тёмная темы без правок.</li>
+                        <li>Статус — точка и цвет подписи, а не заливка карточки.</li>
+                        <li>Состав планов — полоса из трёх сегментов и счётчики под ней.</li>
+                        <li>План раскрывается как markdown через <code>MarkdownText</code>, при недоступности — <code>&lt;pre&gt;</code>.</li>
+                      </ul>
+                      <h3>Открытые вопросы</h3>
+                      <table>
+                        <tr><th>Вопрос</th><th>Решение</th></tr>
+                        <tr><td>Где живёт страница</td><td>Вкладка рядом с Chat / Trajectory</td></tr>
+                        <tr><td>Живое обновление</td><td>Не в этой итерации</td></tr>
+                      </table>
+                      <pre><code>npm run verify   # гигиена + тесты + сборка</code></pre>
+                    </div>
+                    <div class="actions">
+                      <button class="btn">Открыть в просмотрщике</button>
+                      <button class="btn btn--quiet">Свернуть</button>
+                    </div>
+                  </div>
+                </li>
+
+                <li class="plan">
+                  <button class="plan-head" aria-expanded="false">
+                    <i class="plan-dot ok"></i>
+                    <span class="plan-main">
+                      <span class="plan-name">Спецификация импорта отчёта брокера «Открытие»</span>
+                      <span class="plan-meta">#4<span class="sep">·</span>сегодня, 11:07<span class="sep">·</span><span class="outcome-ok">Утверждён</span></span>
+                    </span>
+                    <svg class="chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5"/></svg>
+                  </button>
+                </li>
+                <li class="plan">
+                  <button class="plan-head" aria-expanded="false">
+                    <i class="plan-dot ok"></i>
+                    <span class="plan-main">
+                      <span class="plan-name">План миграции MSSQL → PostgreSQL для сервиса позиций</span>
+                      <span class="plan-meta">#3<span class="sep">·</span>вчера, 18:12<span class="sep">·</span><span class="outcome-ok">Утверждён</span><span class="sep">·</span>Claude Code</span>
+                    </span>
+                    <svg class="chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5"/></svg>
+                  </button>
+                </li>
+                <li class="plan">
+                  <button class="plan-head" aria-expanded="false">
+                    <i class="plan-dot dismissed"></i>
+                    <span class="plan-main">
+                      <span class="plan-name">Ревизия документации EFTR.DataFeed.Position</span>
+                      <span class="plan-meta">#2<span class="sep">·</span>вчера, 10:41<span class="sep">·</span>Отклонён</span>
+                    </span>
+                    <svg class="chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5"/></svg>
+                  </button>
+                </li>
+                <li class="plan">
+                  <button class="plan-head" aria-expanded="false">
+                    <i class="plan-dot dismissed"></i>
+                    <span class="plan-main">
+                      <span class="plan-name">Черновик ADR по переводу Kafka-консьюмеров</span>
+                      <span class="plan-meta">#1<span class="sep">·</span>20 ноя<span class="sep">·</span>Отклонён</span>
+                    </span>
+                    <svg class="chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5"/></svg>
+                  </button>
+                </li>
+              </ol>
+            </main>
+
+            <aside class="side">
+              <section class="card">
+                <div class="card-head"><span class="card-title">Сводка</span><span class="card-note">5 планов</span></div>
+                <div class="tiles">
+                  <div class="tile tile--ok"><b>2</b><span>утверждено</span></div>
+                  <div class="tile tile--warn"><b>1</b><span>на доработке</span></div>
+                  <div class="tile"><b>2</b><span>отклонено</span></div>
+                  <div class="tile"><b>0</b><span>без итога</span></div>
+                </div>
+                <div class="bar" role="img" aria-label="Состав: утверждено 2, на доработке 1, отклонено 2">
+                  <i class="s-ok" style="flex:2"></i><i class="s-warn" style="flex:1"></i><i class="s-dismissed" style="flex:2"></i>
+                </div>
+                <p class="note">Доля сегмента — доля итога.</p>
+              </section>
+
+              <section class="card">
+                <div class="card-head"><span class="card-title">Сессия</span><span class="card-note">только чтение</span></div>
+                <dl class="rows">
+                  <div class="row"><dt>Идентификатор</dt><dd><code>2af261e0…</code></dd></div>
+                  <div class="row"><dt>Планы</dt><dd>20 ноя — сегодня</dd></div>
+                  <div class="row"><dt>Импортировано</dt><dd>1 из Claude Code</dd></div>
+                  <div class="row"><dt>Первый план</dt><dd>#1 · 20 ноя, 14:02</dd></div>
+                </dl>
+                <p class="note">Плагин читает журнал сессии и ничего в него не пишет.</p>
+              </section>
+            </aside>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const buttons = { light: document.getElementById('theme-light'), dark: document.getElementById('theme-dark') };
+  for (const [theme, button] of Object.entries(buttons)) {
+    button.addEventListener('click', () => {
+      document.documentElement.dataset.theme = theme;
+      buttons.light.setAttribute('aria-pressed', String(theme === 'light'));
+      buttons.dark.setAttribute('aria-pressed', String(theme === 'dark'));
+    });
+  }
+</script>
+</body>
+</html>
