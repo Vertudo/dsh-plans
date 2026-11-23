@@ -45,6 +45,10 @@ function fakeContext(calls, options = {}) {
       calls.push(['inject-service', services.join(',')])
       if (services.every((service) => available.has(service))) callback(ctx)
     },
+    get(name) {
+      calls.push(['get', name])
+      return available.has(name) ? ctx[name] : undefined
+    },
     locale: {
       register(namespace, dictionaries) {
         calls.push(['locale', namespace, Object.keys(dictionaries).sort().join(','), Object.keys(dictionaries.en).length, Object.keys(dictionaries.ru).length])
@@ -64,7 +68,7 @@ function fakeContext(calls, options = {}) {
     },
     sidebarRightTabs: {
       register(definition) {
-        calls.push(['tabtype', definition.id, definition.kind, definition.priority, typeof definition.title, definition.guide?.order])
+        calls.push(['tabtype', definition.id, definition.kind, definition.priority, typeof definition.title, definition.guide?.order, typeof definition.guide?.icon])
         return () => {}
       },
     },
@@ -72,7 +76,7 @@ function fakeContext(calls, options = {}) {
     remote: { session: { events: async () => ({ ok: true, value: { cursor: 1, hasMore: false, records: [] } }) } },
     betterSidebar: {
       registerTab(descriptor) {
-        calls.push(['better-tab', descriptor.id, descriptor.title, typeof descriptor.component])
+        calls.push(['better-tab', descriptor.id, descriptor.title, typeof descriptor.description, typeof descriptor.icon, typeof descriptor.component])
         return () => {}
       },
     },
@@ -83,27 +87,39 @@ function fakeContext(calls, options = {}) {
 test('the shipped bundle mounts without hard service dependencies', () => {
   const registered = loadBundle()
   assert.equal(registered.id, 'dsh-plans')
-  assert.deepEqual(Object.keys(registered.exports).sort(), ['PlansPanel', 'TAB_ID', 'apply', 'inject'])
+  assert.deepEqual(Object.keys(registered.exports).sort(), ['PlanIcon', 'PlansPanel', 'TAB_ID', 'apply', 'inject'])
   assert.deepEqual(registered.exports.inject, [])
+  assert.equal(typeof registered.exports.PlanIcon, 'function')
 })
 
-test('registers the dictionaries and the built-in tab', () => {
+test('registers the dictionaries and the built-in tab with a guide icon', () => {
   const calls = []
   loadBundle().exports.apply(fakeContext(calls))
 
   assert.deepEqual(calls.find((call) => call[0] === 'locale'), ['locale', 'dsh-plans', 'en,ru', 19, 19])
-  assert.deepEqual(calls.find((call) => call[0] === 'tabtype'), ['tabtype', 'dsh-plans', 'plans', 'extension', 'function', 40])
+  assert.deepEqual(calls.find((call) => call[0] === 'tabtype'), ['tabtype', 'dsh-plans', 'plans', 'extension', 'function', 40, 'function'])
   assert.deepEqual(calls.find((call) => call[0] === 'slot'), ['slot', 'sidebar.right.pane.tab', 'dsh-plans', 'function', 'function'])
   assert.deepEqual(calls.filter((call) => call[0] === 'inject').map((call) => call[1]), ['sidebar.right.pane.tab'])
-  assert.deepEqual(calls.filter((call) => call[0] === 'inject-service').map((call) => call[1]), ['locale', 'locale,sidebarRightTabs,slots', 'locale,betterSidebar'])
+  assert.deepEqual(calls.filter((call) => call[0] === 'inject-service').map((call) => call[1]), [
+    'locale',
+    'locale,sidebarRightTabs,slots,remote,sidebarRight',
+    'locale,betterSidebar,remote',
+  ])
   assert.equal(calls.some((call) => call[0] === 'better-tab'), false)
 })
 
-test('registers a tab in dsh-better-sidebar when that service is present', () => {
+test('registers a tab in dsh-better-sidebar with a title, description and icon', () => {
   const calls = []
   loadBundle().exports.apply(fakeContext(calls, { betterSidebar: true }))
-  const tab = calls.find((call) => call[0] === 'better-tab')
-  assert.deepEqual(tab, ['better-tab', 'dsh-plans:plans', 'tab.title', 'function'])
+  assert.deepEqual(calls.find((call) => call[0] === 'better-tab'), [
+    'better-tab',
+    'dsh-plans:plans',
+    'tab.title',
+    'function',
+    'function',
+    'function',
+  ])
+  assert.equal(calls.some((call) => call[0] === 'get' && call[1] === 'sidebarRight'), true)
 })
 
 test('every dictionary has the same keys in both languages', async () => {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2
+
+- Fixes `dsh-better-sidebar: cannot get property "remote" without inject` when the tab opens: the services are read inside the `ctx.inject` block and captured in closures instead of being touched on the raw context.
+- The tab now carries an icon (a plan glyph) and a description, so it no longer shows as an empty tile in the better-sidebar guide and chip.
+- The better-sidebar title is a plain string, because that registry stores the chip text rather than calling a getter.
+
 ## 0.2.1
 
 - The client module declares no hard service dependencies: each registration waits for its own services through `ctx.inject`, so a missing service no longer keeps the plugin entry in the `loading` phase.

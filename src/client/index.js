@@ -4,14 +4,15 @@
  *
  * Two target registries exist in the wild:
  *
- * - the built-in right Sidebar (`ctx.sidebarRightTabs` + its slot), where a row
- *   opens `dsh-resource://plan/<session>/<callId>` in the shipped plan viewer;
+ * - the built-in right Sidebar (`ctx.sidebarRightTabs` + its slot);
  * - `dsh-better-sidebar` (`ctx.betterSidebar.registerTab`), which draws its own
- *   column and receives the tab component with a Session `scope`.
+ *   column and calls the tab component with a Session `scope`.
  *
- * The tab registers in both when both are present. Rows expand the plan inline
- * everywhere, so reading never depends on which column is on screen; where the
- * built-in sidebar exists, the expanded plan also offers to open in its viewer.
+ * The plugin declares no hard service dependencies: each block below runs when
+ * its own services appear, so a profile without one of them still activates the
+ * plugin instead of leaving the entry waiting. Services are read inside the
+ * block and captured in closures — touching `ctx.<service>` later from a
+ * component would fail with "cannot get property without inject".
  */
 import { createElement as h, useCallback, useEffect, useState } from 'react'
 import { planAddress } from '../plans/log.js'
@@ -25,9 +26,6 @@ const NS = 'dsh-plans'
 
 export const inject = []
 
-// Optional services: each block runs when the service appears, so a profile
-// without one of them still activates the plugin instead of waiting forever.
-
 const STYLE = {
   root: { display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', height: '100%', boxSizing: 'border-box', overflowY: 'auto', color: 'inherit', fontSize: '13px' },
   head: { display: 'flex', alignItems: 'baseline', gap: '8px', justifyContent: 'space-between' },
@@ -37,12 +35,30 @@ const STYLE = {
   button: { border: '1px solid currentColor', background: 'transparent', color: 'inherit', borderRadius: '6px', padding: '2px 8px', fontSize: '12px', cursor: 'pointer', opacity: 0.85 },
   list: { display: 'flex', flexDirection: 'column', gap: '6px', margin: 0, padding: 0, listStyle: 'none' },
   row: { display: 'flex', flexDirection: 'column', gap: '2px', width: '100%', textAlign: 'left', border: '1px solid currentColor', background: 'transparent', color: 'inherit', borderRadius: '8px', padding: '8px', cursor: 'pointer', opacity: 0.9 },
-  rowOpen: { borderStyle: 'solid', opacity: 1 },
+  rowOpen: { opacity: 1 },
   rowTitle: { fontWeight: 600, lineHeight: 1.3 },
   plan: { margin: '4px 0 0', padding: '8px', borderTop: '1px solid currentColor', whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: '12px', lineHeight: 1.45, maxHeight: '60vh', overflowY: 'auto' },
   link: { alignSelf: 'flex-start', marginTop: '6px', border: 'none', background: 'transparent', color: 'inherit', textDecoration: 'underline', cursor: 'pointer', fontSize: '12px', padding: 0, opacity: 0.8 },
   note: { opacity: 0.7, margin: 0 },
   error: { margin: 0, padding: '8px', border: '1px dashed currentColor', borderRadius: '8px' },
+}
+
+/** A plan glyph: lines of a document with the review dot. */
+export function PlanIcon({ size = 16 } = {}) {
+  return h('svg', {
+    width: size,
+    height: size,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2,
+    strokeLinecap: 'round',
+    'aria-hidden': 'true',
+  },
+    h('path', { key: 'a', d: 'M5 4h14v16H5z', rx: 2 }),
+    h('path', { key: 'b', d: 'M9 9h6M9 13h6M9 17h3' }),
+    h('circle', { key: 'c', cx: 17, cy: 17, r: 2, fill: 'currentColor', stroke: 'none' }),
+  )
 }
 
 function statusLabel(status, t) {
@@ -160,8 +176,11 @@ export function apply(ctx) {
     scoped.effect(() => scoped.locale.register(NS, { en, ru }), 'dsh-plans: dictionaries')
   })
 
-  ctx.inject(['locale', 'sidebarRightTabs', 'slots'], (scoped) => {
+  ctx.inject(['locale', 'sidebarRightTabs', 'slots', 'remote', 'sidebarRight'], (scoped) => {
     const t = scoped.locale.bind(NS)
+    const remote = scoped.remote
+    const sidebarRight = scoped.sidebarRight
+
     scoped.effect(() => scoped.sidebarRightTabs.register({
       id: TAB_ID,
       kind: TAB_KIND,
@@ -171,6 +190,7 @@ export function apply(ctx) {
         order: 40,
         title: () => t('guide.title'),
         description: () => t('guide.description'),
+        icon: (size) => h(PlanIcon, { size: size ?? 16 }),
       },
     }), 'dsh-plans: tab type')
 
@@ -182,25 +202,32 @@ export function apply(ctx) {
         const sessionId = typeof owner === 'string' ? owner : owner?.sessionId
         return {
           sessionId,
-          readPlans: (signal) => readSessionPlans(ctx.remote.session, sessionId, signal),
-          openPlan: (callId) => ctx.sidebarRight.openResource(planAddress(sessionId, callId)),
+          readPlans: (signal) => readSessionPlans(remote.session, sessionId, signal),
+          openPlan: (callId) => sidebarRight.openResource(planAddress(sessionId, callId)),
         }
       },
     }, PlansPanel)), 'dsh-plans: tab body')
   })
 
-  ctx.inject(['locale', 'betterSidebar'], (scoped) => {
+  ctx.inject(['locale', 'betterSidebar', 'remote'], (scoped) => {
     const t = scoped.locale.bind(NS)
+    const remote = scoped.remote
+    const sidebarRight = typeof scoped.get === 'function' ? scoped.get('sidebarRight') : undefined
+
     scoped.effect(() => scoped.betterSidebar.registerTab({
       id: BETTER_TAB_ID,
+      // A plain string: the registry stores the tab title as text, it does not
+      // call a function for the chip. Locale switching needs a re-registration.
       title: t('tab.title'),
+      description: () => t('guide.description'),
+      icon: (size) => h(PlanIcon, { size: size ?? 16 }),
       component: (props) => {
         const sessionId = props?.scope?.sessionId
         return h(PlansPanel, {
           t,
           sessionId,
-          readPlans: (signal) => readSessionPlans(ctx.remote.session, sessionId, signal),
-          openPlan: (callId) => ctx.sidebarRight.openResource(planAddress(sessionId, callId)),
+          readPlans: (signal) => readSessionPlans(remote.session, sessionId, signal),
+          openPlan: sidebarRight === undefined ? undefined : (callId) => sidebarRight.openResource(planAddress(sessionId, callId)),
         })
       },
     }), 'dsh-plans: better-sidebar tab')
