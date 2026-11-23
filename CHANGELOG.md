@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0
+
+- Registers the tab in  too (), so the pane appears in its column when that plugin draws the sidebar.
+- A row now expands the plan inline; the built-in plan viewer is offered as an extra action where the built-in Sidebar exists.
+
 ## 0.1.0
 
 - First version: a `Plans` tab in the right sidebar listing every plan the current Session submitted, newest first.

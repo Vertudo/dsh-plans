@@ -23,6 +23,15 @@ dsh plugin --profile <profile> add ./dsh-plans
 
 or add the bundle from the Plugins page. Restart DSH (or reload the window) so the browser picks up the client half.
 
+## Where the tab appears
+
+Two sidebar implementations are in the wild, and the plugin registers in both:
+
+- **Built-in right Sidebar** — the tab is added from its guide: open the add control, pick `Plans`.
+- **dsh-better-sidebar** — its own column gets a `Plans` tab directly, no setup needed.
+
+A row expands the plan inline, so reading works whichever column is on screen. Where the built-in Sidebar exists, the expanded plan also offers to open in the shipped plan viewer.
+
 ## Use
 
 1. Open the right sidebar in a Session that went through plan mode.
