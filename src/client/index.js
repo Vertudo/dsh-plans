@@ -50,25 +50,13 @@ function iconFor(size = 16) {
   return h('span', { style: { fontSize: `${size}px`, lineHeight: 1 }, 'aria-hidden': 'true' }, ICON)
 }
 
-/** Resolves a service outside an inject scope, without triggering the proxy guard. */
-function serviceOf(ctx, name) {
+/** Reads a value, returning `undefined` when cordis refuses the access. */
+function attempt(fn) {
   try {
-    return typeof ctx.get === 'function' ? ctx.get(name) : undefined
+    return fn()
   } catch {
     return undefined
   }
-}
-
-function sessionRemoteOf(ctx) {
-  const session = serviceOf(ctx, 'remote')?.session
-  if (session === undefined || session === null) throw new Error('the session remote is unavailable')
-  return session
-}
-
-function openResourceOf(ctx) {
-  const sidebarRight = serviceOf(ctx, 'sidebarRight')
-  const open = sidebarRight?.openResource
-  return typeof open === 'function' ? open.bind(sidebarRight) : undefined
 }
 
 function statusLabel(status, t) {
@@ -182,6 +170,23 @@ export function PlansPanel(props) {
 }
 
 export function apply(ctx) {
+  // Cordis allows a service read only in the plugin's own apply context, never
+  // from a component that renders later. Capturing the values here is what the
+  // shipped plan package does with `planResourceProvider(ctx.remote.session)`.
+  const sessionRemote = attempt(() => ctx.remote.session)
+  const openResource = attempt(() => {
+    const sidebarRight = ctx.sidebarRight
+    return typeof sidebarRight.openResource === 'function' ? sidebarRight.openResource.bind(sidebarRight) : undefined
+  })
+
+  const readPlansWith = (sessionId) => (signal) => (sessionRemote === undefined
+    ? Promise.reject(new Error('the session remote is unavailable'))
+    : readSessionPlans(sessionRemote, sessionId, signal))
+
+  const openPlanWith = (sessionId) => (callId) => {
+    if (openResource !== undefined) openResource(planAddress(sessionId, callId))
+  }
+
   ctx.inject(['locale'], (scoped) => {
     scoped.effect(() => scoped.locale.register(NS, { en, ru }), 'dsh-plans: dictionaries')
   })
@@ -210,11 +215,8 @@ export function apply(ctx) {
         const sessionId = typeof owner === 'string' ? owner : owner?.sessionId
         return {
           sessionId,
-          readPlans: (signal) => readSessionPlans(sessionRemoteOf(ctx), sessionId, signal),
-          openPlan: (callId) => {
-            const open = openResourceOf(ctx)
-            if (open !== undefined) open(planAddress(sessionId, callId))
-          },
+          readPlans: readPlansWith(sessionId),
+          openPlan: openPlanWith(sessionId),
         }
       },
     }, PlansPanel)), 'dsh-plans: tab body')
@@ -234,11 +236,8 @@ export function apply(ctx) {
         return h(PlansPanel, {
           t,
           sessionId,
-          readPlans: (signal) => readSessionPlans(sessionRemoteOf(ctx), sessionId, signal),
-          openPlan: (callId) => {
-            const open = openResourceOf(ctx)
-            if (open !== undefined) open(planAddress(sessionId, callId))
-          },
+          readPlans: readPlansWith(sessionId),
+          openPlan: openPlanWith(sessionId),
         })
       },
     }), 'dsh-plans: better-sidebar tab')

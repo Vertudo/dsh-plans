@@ -1,18 +1,22 @@
 # Changelog
 
+## 0.2.5
+
+- Reads `remote.session` and `sidebarRight.openResource` inside `apply` and captures the values, which is the one context cordis allows a service read in — the same way the shipped `@deepseek-ai/dsh-client-ui-plan` package wires `planResourceProvider(ctx.remote.session)`. Reads from a `ctx.inject` callback or from the rendering path are refused, which is what earlier versions hit.
+- A failed capture no longer breaks anything: the tab still registers, and the pane reports that the session remote is unavailable.
+
 ## 0.2.4
 
-- Registration and data access are separated. Registering the tab needs only `locale` (plus `betterSidebar` in that registry), so the pane is always created; reading the Session resolves the `remote` service at call time through the safe `ctx.get` accessor and binds `sidebarRight.openResource` the same way. A missing remote now shows a readable message inside the pane instead of removing the tab, which is what happened in 0.2.3 when the nested service was read during registration.
+- Registration and data access are separated. Registering the tab needs only `locale` (plus `betterSidebar` in that registry), so the pane is always created. A missing remote shows a readable message inside the pane instead of removing the tab.
 
 ## 0.2.3
 
-- Fixes `dsh-better-sidebar: cannot get property "remote.session" without inject`: a nested service path is guarded like the service itself, so `remote.session` and `sidebarRight.openResource` are read inside the `inject` scope.
 - The tab icon is the 📋 emoji, used by both registries (the better-sidebar chip and the built-in guide tile).
+- Tried reading the nested service through the `inject` scope, which the guard refuses.
 
 ## 0.2.2
 
-- Fixes `dsh-better-sidebar: cannot get property "remote" without inject` when the tab opens: the services are read inside the `ctx.inject` block and captured in closures instead of being touched on the raw context.
-- The tab now carries an icon and a description, so it no longer shows as an empty tile in the better-sidebar guide and chip.
+- The tab carries an icon and a description, so it no longer shows as an empty tile in the better-sidebar guide and chip.
 - The better-sidebar title is a plain string, because that registry stores the chip text rather than calling a getter.
 
 ## 0.2.1
