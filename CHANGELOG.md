@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- The client module declares no hard service dependencies: each registration waits for its own services through , so a missing service no longer keeps the plugin entry in the  phase.
+- The panel row expands the plan inline, so the pane is readable without the built-in plan viewer.
+
 ## 0.2.0
 
 - Registers the tab in  too (), so the pane appears in its column when that plugin draws the sidebar.
