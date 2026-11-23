@@ -1,12 +1,14 @@
 /**
- * The host's markdown renderer, when the shared module table carries one.
+ * The host's markdown renderer.
  *
  * `require` here is the module loader's own lookup: the Web bundle is loaded as
- * a factory that receives it, and the browser's module table owns
- * `@deepseek-ai/dsh-client-ui-primitives`, the same module the shipped plan
- * viewer renders with. Outside that loader — the Node tests, a page with no
- * module table — the lookup is absent or throws, and the pane falls back to a
- * `<pre>` with the raw markdown. The lookup runs once and is remembered.
+ * a factory that receives it, and the browser seeds a frozen module table that
+ * carries `@deepseek-ai/dsh-client-ui-primitives` — the same shared module the
+ * shipped plan viewer renders with. The lookup runs once and is remembered.
+ *
+ * The answer decides how a card behaves: with the renderer a click reads the
+ * plan in place; without it the plugin prints no markdown at all and the card
+ * opens the built-in plan viewer instead (`PlanCard`).
  */
 
 let resolved

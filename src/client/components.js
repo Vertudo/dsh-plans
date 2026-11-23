@@ -125,28 +125,35 @@ export function Feedback({ text, t }) {
 }
 
 /**
- * The plan document: the host's markdown renderer when the module table has it,
- * the raw markdown otherwise. Both paths keep the same box, so a missing module
- * costs the styling of the document, not the ability to read it.
+ * The plan document, drawn by the host's own markdown renderer — the same
+ * `MarkdownText` the built-in plan viewer uses, so the text is the same one.
+ * When that module is not reachable there is no raw-text fallback: `PlanCard`
+ * turns the card into "open in the viewer" instead.
  */
 export function PlanDoc({ plan, t, variant }) {
   const Markdown = markdownRenderer()
+  if (Markdown === null) return null
   const className = variant === 'panel' ? 'plans-doc plans-doc--panel' : 'plans-doc'
-  if (Markdown !== null) {
-    const labels = {
-      code: {
-        copyLabel: t('md.copy'),
-        copiedLabel: t('md.copied'),
-        toolbarLabels: { codeLabel: t('md.code'), wrapLabel: t('md.wrap'), unwrapLabel: t('md.unwrap') },
-      },
-      footnotes: t('md.footnotes'),
-    }
-    return h('div', { className }, h(Markdown, { text: plan.markdown, labels }))
+  const labels = {
+    code: {
+      copyLabel: t('md.copy'),
+      copiedLabel: t('md.copied'),
+      toolbarLabels: { codeLabel: t('md.code'), wrapLabel: t('md.wrap'), unwrapLabel: t('md.unwrap') },
+    },
+    footnotes: t('md.footnotes'),
   }
-  return h('div', { className }, h('pre', { className: 'plans-doc-pre' }, plan.markdown))
+  return h('div', { className }, h(Markdown, { text: plan.markdown, labels }))
 }
 
+/**
+ * One plan. Clicking it reads the plan in place when the host renderer is
+ * reachable; otherwise the card is a single action that opens the built-in plan
+ * viewer, and no markdown is printed.
+ */
 export function PlanCard({ plan, open, onToggle, onOpen, onOpenPage, t, variant }) {
+  const inline = markdownRenderer() !== null
+  const canOpen = typeof onOpen === 'function'
+
   const meta = [h('span', { key: 'n' }, `#${plan.n}`)]
   const separator = (key) => h('span', { key: `sep-${key}`, className: 'plans-sep', 'aria-hidden': 'true' }, '·')
   const time = timeLabel(plan.time, Date.now(), localeName(), t('time.yesterday'))
@@ -155,23 +162,28 @@ export function PlanCard({ plan, open, onToggle, onOpen, onOpenPage, t, variant 
   if (plan.source === 'claude') meta.push(separator('source'), h('span', { key: 'source' }, t('panel.imported')))
 
   const title = typeof plan.title === 'string' && plan.title !== '' ? plan.title : t('panel.untitled', { n: plan.n })
+  const expanded = inline && open
 
   const head = h('button', {
     type: 'button',
     className: 'plans-plan-head',
-    'aria-expanded': open ? 'true' : 'false',
-    onClick: () => onToggle(plan.callId),
+    ...(inline ? { 'aria-expanded': expanded ? 'true' : 'false' } : {}),
+    ...(inline ? {} : { title: canOpen ? t('panel.open') : undefined }),
+    onClick: () => {
+      if (inline) onToggle(plan.callId)
+      else if (canOpen) onOpen(plan.callId)
+    },
   },
   h(StatusDot, { status: plan.status }),
   h('span', { className: 'plans-plan-main' },
     h('span', { className: 'plans-plan-title' }, title),
     h('span', { className: 'plans-plan-meta' }, meta)),
-  h(ChevronIcon, { className: 'plans-chevron' }))
+  h(ChevronIcon, { className: inline ? 'plans-chevron' : 'plans-chevron plans-chevron--go' }))
 
   let body = null
-  if (open) {
+  if (expanded) {
     const actions = []
-    if (typeof onOpen === 'function') {
+    if (canOpen) {
       actions.push(h('button', {
         key: 'open',
         type: 'button',
@@ -200,7 +212,11 @@ export function PlanCard({ plan, open, onToggle, onOpen, onOpenPage, t, variant 
     body = h('div', { className: 'plans-plan-body' }, parts)
   }
 
-  return h('li', { className: open ? 'plans-plan plans-plan--open' : 'plans-plan', 'data-status': plan.status }, head, body)
+  return h('li', {
+    className: expanded ? 'plans-plan plans-plan--open' : 'plans-plan',
+    'data-status': plan.status,
+    'data-reads-inline': inline ? 'true' : 'false',
+  }, head, body)
 }
 
 export function EmptyState({ t }) {

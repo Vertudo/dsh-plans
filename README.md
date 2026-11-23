@@ -10,7 +10,7 @@ Plan mode already renders one submitted plan at a time: it opens a plan tab whil
 
 - **The list.** The right sidebar gets a `Plans` tab: one card per submitted plan, newest first, with the plan number, its outcome and its time.
 - **The mix.** A composition bar and counters split the list by outcome; chips filter it, each with its count.
-- **The plan itself.** A card expands in place and shows the plan as markdown — the host's own renderer, with a plain-text fallback — plus the review feedback when the plan was sent back. `Open in the viewer` hands the plan to the built-in plan tab.
+- **The plan itself.** A card expands in place and reads the plan through the host's own `MarkdownText` — the same renderer the built-in plan viewer uses — plus the review feedback when the plan was sent back. `Open in the viewer` hands the plan to the built-in plan tab. Raw markdown is never printed: where the renderer is missing, a click opens the viewer instead.
 - **The page.** A center-column view beside `Chat` and `Trajectory`: filters and cards on the left, the outcome mix and a Session card on the right.
 - **Imported Sessions.** Plans from Claude Code Sessions imported into DSH are read too: they call the same tool under the name `ExitPlanMode`.
 
@@ -59,7 +59,7 @@ The plugin therefore ships one client module and an empty host half: the row in 
 
 - **Current Session only.** The list covers the Session whose pane or view it is; there is no cross-Session view.
 - **Manual refresh.** A plan submitted while the pane is open appears after `Refresh`; nothing polls the log.
-- **Built-in rendering.** How a plan looks is the host markdown renderer's business; without `MarkdownText` the plan reads as plain text. If the built-in `plan` tab is ever removed from a deployment, cards still list plans but cannot open them in the viewer.
+- **Built-in rendering.** How a plan looks is the host markdown renderer's business; without `MarkdownText` a click opens the plan in the viewer and no raw text is printed. If the built-in `plan` tab is ever removed from a deployment, cards still list plans but cannot open them in the viewer.
 - **Expanded state is not saved.** Which cards are open lives in the pane's own state and is lost on reload.
 - **Imported sessions.** A plan from an imported Claude Code Session lists with the `Claude Code` mark; the built-in viewer resolves it from the same Session history.
 

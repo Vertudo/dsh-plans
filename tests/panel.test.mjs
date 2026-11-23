@@ -2,10 +2,10 @@
  * The shipped client bundle, rendered.
  *
  * The package carries no React, so these tests mount the bundle through the
- * harness in `harness.mjs`: loading state, ready state, an expanded row, the
- * markdown fallback, the outcome filter, and both failures. What they protect is
- * the structure a reader sees — the classes `panel.css` paints, and that the
- * list survives a missing markdown module.
+ * harness in `harness.mjs`: loading state, ready state, reading a plan in place,
+ * the viewer hand-off when the host renderer is missing, the outcome filter, and
+ * both failures. What they protect is the structure a reader sees — the classes
+ * `panel.css` paints, and that no raw markdown is ever printed.
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -27,6 +27,11 @@ const plans = [
 ]
 
 const t = (key) => key
+
+/** The host's markdown module as the browser table would hand it over. */
+const hostPrimitives = {
+  MarkdownText: (props) => ({ type: 'div', props: { className: 'fake-markdown', children: props.text } }),
+}
 
 function loadBundle(options = {}) {
   const { react, render } = createReact()
@@ -80,39 +85,41 @@ test('the panel reads first: skeletons, then four rows with their outcomes', asy
   assert.equal(findAll(ready, (node) => hasClass(node, 'plans-count')).length, 1)
   assert.equal(findAll(ready, (node) => hasClass(node, 'plans-bar-seg')).length, 3, 'approved, revise and dismissed fill the bar')
   assert.equal(findAll(ready, (node) => hasClass(node, 'plans-chip')).length, 4, '"all" plus the three outcomes')
-  assert.equal(findAll(ready, (node) => hasClass(node, 'plans-doc')).length, 0, 'nothing is expanded yet')
 })
 
-test('a row opens its plan, its review feedback and a fallback document', async () => {
-  const { exports, render } = loadBundle()
+test('with the host renderer a click reads the plan in place, feedback included', async () => {
+  const { exports, render } = loadBundle({ primitives: hostPrimitives })
   const props = propsOf()
   const ready = await mount(render, exports.PlansPanel, props)
 
   findAll(ready, (node) => hasClass(node, 'plans-plan-head'))[1].props.onClick()
   const opened = expand(render(exports.PlansPanel, props).tree)
 
-  assert.equal(findAll(opened, (node) => hasClass(node, 'plans-doc')).length, 1)
-  assert.equal(findAll(opened, (node) => node.type === 'pre').length, 1, 'without the host module the raw markdown is shown')
+  assert.equal(findAll(opened, (node) => hasClass(node, 'plans-plan--open')).length, 1)
+  assert.equal(findAll(opened, (node) => hasClass(node, 'fake-markdown')).length, 1)
+  assert.equal(findAll(opened, (node) => node.type === 'pre').length, 0, 'markdown is never printed as raw text')
   assert.match(textOf(opened), /Переделать сводку/)
-  assert.match(textOf(opened), /# План на доработке/)
   assert.equal(findAll(opened, (node) => hasClass(node, 'plans-feedback')).length, 1)
 })
 
-test('the host markdown renderer replaces the fallback when the module table has it', async () => {
-  const MarkdownText = (props) => ({ type: 'div', props: { className: 'fake-markdown', children: props.text } })
-  const { exports, render } = loadBundle({ primitives: { MarkdownText } })
-  const props = propsOf()
+test('without the host renderer a click opens the viewer and prints no markdown', async () => {
+  const { exports, render } = loadBundle()
+  const opened = []
+  const props = propsOf({ openPlan: (callId) => opened.push(callId) })
   const ready = await mount(render, exports.PlansPanel, props)
 
-  findAll(ready, (node) => hasClass(node, 'plans-plan-head'))[0].props.onClick()
-  const opened = expand(render(exports.PlansPanel, props).tree)
+  findAll(ready, (node) => hasClass(node, 'plans-plan-head'))[1].props.onClick()
+  const after = expand(render(exports.PlansPanel, props).tree)
 
-  assert.equal(findAll(opened, (node) => hasClass(node, 'fake-markdown')).length, 1)
-  assert.equal(findAll(opened, (node) => node.type === 'pre').length, 0)
+  assert.deepEqual(opened, ['c3'])
+  assert.equal(findAll(after, (node) => hasClass(node, 'plans-plan--open')).length, 0)
+  assert.equal(findAll(after, (node) => hasClass(node, 'plans-doc')).length, 0)
+  assert.equal(findAll(after, (node) => node.type === 'pre').length, 0)
+  assert.equal(findAll(after, (node) => hasClass(node, 'plans-plan')).length, 4, 'the rows stay')
 })
 
 test('a chip filters the list without touching the order', async () => {
-  const { exports, render } = loadBundle()
+  const { exports, render } = loadBundle({ primitives: hostPrimitives })
   const props = propsOf()
   const ready = await mount(render, exports.PlansPanel, props)
 
@@ -127,7 +134,7 @@ test('a chip filters the list without touching the order', async () => {
 })
 
 test('the page opens the newest plan and keeps the summary and the Session beside it', async () => {
-  const { exports, render } = loadBundle()
+  const { exports, render } = loadBundle({ primitives: hostPrimitives })
   const props = propsOf()
   const page = await mount(render, exports.PlansPage, props)
 
