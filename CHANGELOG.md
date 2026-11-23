@@ -1,8 +1,12 @@
 # Changelog
 
+## 0.2.4
+
+- Registration and data access are separated. Registering the tab needs only `locale` (plus `betterSidebar` in that registry), so the pane is always created; reading the Session resolves the `remote` service at call time through the safe `ctx.get` accessor and binds `sidebarRight.openResource` the same way. A missing remote now shows a readable message inside the pane instead of removing the tab, which is what happened in 0.2.3 when the nested service was read during registration.
+
 ## 0.2.3
 
-- Fixes `dsh-better-sidebar: cannot get property "remote.session" without inject`: a nested service path is guarded like the service itself, so `remote.session` and `sidebarRight.openResource` are now read inside the `inject` scope and captured as plain values and bound methods for later use by the component.
+- Fixes `dsh-better-sidebar: cannot get property "remote.session" without inject`: a nested service path is guarded like the service itself, so `remote.session` and `sidebarRight.openResource` are read inside the `inject` scope.
 - The tab icon is the 📋 emoji, used by both registries (the better-sidebar chip and the built-in guide tile).
 
 ## 0.2.2
