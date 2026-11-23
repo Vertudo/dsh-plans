@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Plans",
-    "description": "Lists every plan this Session submitted for review, newest first, in the right sidebar. Click a row to open the full plan in the built-in plan viewer. Plans are read from the Session log: exit_plan_mode calls, and ExitPlanMode calls in imported Claude Code Sessions. Each row shows its number, outcome (approved, sent back for revision or dismissed) and time. The panel only reads the Session, never writes to it, and needs no approvals. Open it from the sidebar guide, or with the Plans entry added there.",
+    "description": "Lists every plan this Session submitted for review, newest first — in the right sidebar and on a page beside Chat. A composition bar and counters split the plans by outcome, chips filter the list, and a card opens the plan as markdown with the review feedback when it was sent back. Plans are read from the Session log: exit_plan_mode calls, and ExitPlanMode calls in imported Claude Code Sessions. The plugin only reads the Session, never writes to it, and needs no approvals. Open it from the sidebar guide or the Plans view in the header.",
     "detail": "docs/DETAIL.md"
   }
 }
