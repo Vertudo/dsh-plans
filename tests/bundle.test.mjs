@@ -1,7 +1,8 @@
 /**
  * Smoke test for the shipped client bundle: against a Host-like plugin context
- * it must register the dictionaries, the built-in right-Sidebar tab and, when
- * `dsh-better-sidebar` is present, a tab in that registry too.
+ * it must register the dictionaries, the built-in right-Sidebar tab, and a tab
+ * in `dsh-better-sidebar` when that service is present. Every registration is
+ * optional, so the plugin activates even when a service is missing.
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -33,6 +34,8 @@ function loadBundle() {
 }
 
 function fakeContext(calls, options = {}) {
+  const available = new Set(['locale', 'slots', 'sidebarRightTabs', 'sidebarRight', 'remote'])
+  if (options.betterSidebar === true) available.add('betterSidebar')
   const ctx = {
     effect(fn, label) {
       calls.push(['effect', label])
@@ -40,7 +43,7 @@ function fakeContext(calls, options = {}) {
     },
     inject(services, callback) {
       calls.push(['inject-service', services.join(',')])
-      if (services.includes('betterSidebar') && options.betterSidebar === true) callback(ctx)
+      if (services.every((service) => available.has(service))) callback(ctx)
     },
     locale: {
       register(namespace, dictionaries) {
@@ -77,21 +80,23 @@ function fakeContext(calls, options = {}) {
   return ctx
 }
 
-test('the shipped bundle mounts and registers the built-in tab, body and dictionaries', () => {
+test('the shipped bundle mounts without hard service dependencies', () => {
   const registered = loadBundle()
   assert.equal(registered.id, 'dsh-plans')
   assert.deepEqual(Object.keys(registered.exports).sort(), ['PlansPanel', 'TAB_ID', 'apply', 'inject'])
-  assert.deepEqual(registered.exports.inject, ['slots', 'locale', 'remote', 'sidebarRight', 'sidebarRightTabs'])
+  assert.deepEqual(registered.exports.inject, [])
+})
 
+test('registers the dictionaries and the built-in tab', () => {
   const calls = []
-  registered.exports.apply(fakeContext(calls))
+  loadBundle().exports.apply(fakeContext(calls))
 
   assert.deepEqual(calls.find((call) => call[0] === 'locale'), ['locale', 'dsh-plans', 'en,ru', 19, 19])
   assert.deepEqual(calls.find((call) => call[0] === 'tabtype'), ['tabtype', 'dsh-plans', 'plans', 'extension', 'function', 40])
   assert.deepEqual(calls.find((call) => call[0] === 'slot'), ['slot', 'sidebar.right.pane.tab', 'dsh-plans', 'function', 'function'])
   assert.deepEqual(calls.filter((call) => call[0] === 'inject').map((call) => call[1]), ['sidebar.right.pane.tab'])
+  assert.deepEqual(calls.filter((call) => call[0] === 'inject-service').map((call) => call[1]), ['locale', 'locale,sidebarRightTabs,slots', 'locale,betterSidebar'])
   assert.equal(calls.some((call) => call[0] === 'better-tab'), false)
-  assert.deepEqual(calls.find((call) => call[0] === 'inject-service'), ['inject-service', 'betterSidebar'])
 })
 
 test('registers a tab in dsh-better-sidebar when that service is present', () => {

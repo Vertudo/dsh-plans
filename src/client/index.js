@@ -23,7 +23,10 @@ const TAB_KIND = 'plans'
 const BETTER_TAB_ID = 'dsh-plans:plans'
 const NS = 'dsh-plans'
 
-export const inject = ['slots', 'locale', 'remote', 'sidebarRight', 'sidebarRightTabs']
+export const inject = []
+
+// Optional services: each block runs when the service appears, so a profile
+// without one of them still activates the plugin instead of waiting forever.
 
 const STYLE = {
   root: { display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', height: '100%', boxSizing: 'border-box', overflowY: 'auto', color: 'inherit', fontSize: '13px' },
@@ -153,36 +156,41 @@ export function PlansPanel(props) {
 }
 
 export function apply(ctx) {
-  ctx.effect(() => ctx.locale.register(NS, { en, ru }), 'dsh-plans: dictionaries')
-  const t = ctx.locale.bind(NS)
+  ctx.inject(['locale'], (scoped) => {
+    scoped.effect(() => scoped.locale.register(NS, { en, ru }), 'dsh-plans: dictionaries')
+  })
 
-  ctx.effect(() => ctx.sidebarRightTabs.register({
-    id: TAB_ID,
-    kind: TAB_KIND,
-    priority: 'extension',
-    title: () => t('tab.title'),
-    guide: {
-      order: 40,
-      title: () => t('guide.title'),
-      description: () => t('guide.description'),
-    },
-  }), 'dsh-plans: tab type')
+  ctx.inject(['locale', 'sidebarRightTabs', 'slots'], (scoped) => {
+    const t = scoped.locale.bind(NS)
+    scoped.effect(() => scoped.sidebarRightTabs.register({
+      id: TAB_ID,
+      kind: TAB_KIND,
+      priority: 'extension',
+      title: () => t('tab.title'),
+      guide: {
+        order: 40,
+        title: () => t('guide.title'),
+        description: () => t('guide.description'),
+      },
+    }), 'dsh-plans: tab type')
 
-  ctx.effect(() => ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({
-    name: 'sidebar.right.pane.tab',
-    key: TAB_ID,
-    locale: NS,
-    inject: (owner) => {
-      const sessionId = typeof owner === 'string' ? owner : owner?.sessionId
-      return {
-        sessionId,
-        readPlans: (signal) => readSessionPlans(ctx.remote.session, sessionId, signal),
-        openPlan: (callId) => ctx.sidebarRight.openResource(planAddress(sessionId, callId)),
-      }
-    },
-  }, PlansPanel)), 'dsh-plans: tab body')
+    scoped.effect(() => scoped.slots.inject('sidebar.right.pane.tab', () => scoped.slots.register({
+      name: 'sidebar.right.pane.tab',
+      key: TAB_ID,
+      locale: NS,
+      inject: (owner) => {
+        const sessionId = typeof owner === 'string' ? owner : owner?.sessionId
+        return {
+          sessionId,
+          readPlans: (signal) => readSessionPlans(ctx.remote.session, sessionId, signal),
+          openPlan: (callId) => ctx.sidebarRight.openResource(planAddress(sessionId, callId)),
+        }
+      },
+    }, PlansPanel)), 'dsh-plans: tab body')
+  })
 
-  ctx.inject(['betterSidebar'], (scoped) => {
+  ctx.inject(['locale', 'betterSidebar'], (scoped) => {
+    const t = scoped.locale.bind(NS)
     scoped.effect(() => scoped.betterSidebar.registerTab({
       id: BETTER_TAB_ID,
       title: t('tab.title'),
