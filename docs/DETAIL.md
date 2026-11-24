@@ -1,1 +1,1 @@
-![The Plans pane beside a conversation: an outcome bar, filter chips and plan cards, the newest one expanded with its review feedback](preview.svg)
+![The Plans pane beside a conversation: an outcome bar, filter chips and plan cards, each card opening its plan in the built-in viewer](preview.svg)

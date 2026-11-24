@@ -27,7 +27,6 @@
  */
 import { createElement as h } from 'react'
 import { planAddress } from '../plans/log.js'
-import { renderPlan } from './markdown.js'
 import { readSessionPlans } from './read.js'
 import { PlansPanel } from './PlansPanel.js'
 import { PlansPage } from './PlansPage.js'
@@ -121,7 +120,6 @@ export function apply(ctx) {
     rightbar = scoped.sidebarRight
   })
 
-  const canViewer = () => typeof rightbar?.openResource === 'function'
   const canPage = () => typeof rightbar?.openTab === 'function'
 
   const readPlansWith = (sessionId) => (signal) => (sessionRemote === undefined
@@ -174,7 +172,6 @@ export function apply(ctx) {
           sessionId,
           readPlans: readPlansWith(sessionId),
           openPlan: openPlanWith(sessionId),
-          canOpenPlan: canViewer,
           openPage,
           canOpenPage: canPage,
         }
@@ -196,7 +193,6 @@ export function apply(ctx) {
           sessionId,
           readPlans: readPlansWith(sessionId),
           openPlan: openPlanWith(sessionId),
-          canOpenPlan: canViewer,
           openPage,
           canOpenPage: canPage,
         })
@@ -217,7 +213,6 @@ export function apply(ctx) {
           sessionId,
           readPlans: readPlansWith(sessionId),
           openPlan: openPlanWith(sessionId),
-          canOpenPlan: canViewer,
           openPanel: openPage,
           canOpenPanel: canPage,
         }
@@ -226,4 +221,4 @@ export function apply(ctx) {
   })
 }
 
-export { PlansPanel, PlansPage, renderPlan }
+export { PlansPanel, PlansPage }

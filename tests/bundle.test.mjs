@@ -143,7 +143,7 @@ function propsOf(registered, name, key, sessionId = 'sess-1') {
 test('the shipped bundle declares its module-level services', () => {
   const registered = loadBundle()
   assert.equal(registered.id, 'dsh-plans')
-  assert.deepEqual(Object.keys(registered.exports).sort(), ['PlansPage', 'PlansPanel', 'TAB_ID', 'apply', 'inject', 'renderPlan'])
+  assert.deepEqual(Object.keys(registered.exports).sort(), ['PlansPage', 'PlansPanel', 'TAB_ID', 'apply', 'inject'])
   assert.deepEqual(registered.exports.inject, ['locale', 'remote', 'remote.session'])
 })
 
@@ -210,7 +210,6 @@ test('a panel row hands the plan to the built-in viewer', () => {
   const props = propsOf(registered, 'sidebar.right.pane.tab', 'dsh-plans')
 
   assert.equal(props.sessionId, 'sess-1')
-  assert.equal(props.canOpenPlan(), true)
   assert.equal(props.canOpenPage(), true)
 
   const failures = []
@@ -237,17 +236,16 @@ test('a viewer that refuses the plan reports it instead of swallowing the click'
   assert.deepEqual(failures, [['call-2', 'an address no type claims']])
 })
 
-test('without the built-in Sidebar the card is offered no viewer', () => {
+test('without the built-in Sidebar the row reports the refusal', () => {
   const calls = []
   const { ctx, registered } = fakeContext(calls, { rightbar: false })
   loadBundle().exports.apply(ctx)
   const props = propsOf(registered, 'sidebar.right.pane.tab', 'dsh-plans')
 
-  assert.equal(props.canOpenPlan(), false)
-  assert.equal(props.canOpenPage(), false)
+  assert.equal(props.canOpenPage(), false, 'the page link is not offered either')
   const failures = []
   props.openPlan('call-3', (...args) => failures.push(args))
-  assert.deepEqual(failures, [['call-3', 'no-viewer']])
+  assert.deepEqual(failures, [['call-3', 'no-viewer']], 'the click is answered, not swallowed')
 })
 
 test('the page opens the panel only through the built-in Sidebar', () => {

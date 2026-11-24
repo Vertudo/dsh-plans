@@ -30,8 +30,7 @@ const plans = [
     status: 'revise',
     source: 'dsh',
     time: now,
-    feedback: 'Переделать сводку: нужна полоса состава по итогам, а фильтр по статусу — со счётчиками. Макет показать до правки кода.',
-    markdown: '# Дизайн панели «Планы»\n\n## Цель\n\nЗаменить список планов оформлением в языке DSH и добавить страницу на всю ширину.\n\n## Решения\n\n- Только токены темы — ни одного жёсткого цвета.\n- Состав планов — одна полоса и три счётчика.\n- План раскрывается как markdown, а не как `<pre>`.\n\n| Вопрос | Решение |\n| --- | --- |\n| Где страница | Вкладка рядом с Chat |\n| Живое обновление | Позже |\n\n```sh\nnpm run verify\n```',
+    markdown: '# Дизайн панели «Планы»\n\n## Цель\n\nЗаменить список планов оформлением в языке DSH и добавить страницу на всю ширину.\n\n## Решения\n\n- Только токены темы — ни одного жёсткого цвета.\n- Состав планов — одна полоса и три счётчика.\n- План открывается в просмотрщике, а не в карточке.\n\n| Вопрос | Решение |\n| --- | --- |\n| Где страница | Вкладка рядом с Chat |\n| Живое обновление | Позже |\n\n```sh\nnpm run verify\n```',
   },
   { callId: 'c4', n: 4, title: 'Спецификация импорта отчёта брокера «Открытие»', status: 'approved', source: 'dsh', time: now - 5_400_000, markdown: '# Спецификация\n\nТекст.' },
   { callId: 'c3', n: 3, title: 'План миграции MSSQL → PostgreSQL для сервиса позиций', status: 'approved', source: 'claude', time: now - 86_400_000, markdown: '# Миграция' },
@@ -39,85 +38,11 @@ const plans = [
   { callId: 'c1', n: 1, title: 'Черновик ADR по переводу Kafka-консьюмеров', status: 'dismissed', source: 'dsh', time: now - 260_000_000, markdown: '# ADR' },
 ]
 
-/* ── a stand-in for the host's markdown renderer ───────────────────────── */
-
-const h = (type, props, ...children) => ({ type, props: { ...(props ?? {}), children: children.length === 1 ? children[0] : children } })
-
-function parseInline(text) {
-  const out = []
-  const pattern = /`([^`]+)`/g
-  let last = 0
-  let match
-  while ((match = pattern.exec(text)) !== null) {
-    if (match.index > last) out.push(text.slice(last, match.index))
-    out.push(h('code', null, match[1]))
-    last = match.index + match[0].length
-  }
-  if (last < text.length) out.push(text.slice(last))
-  return out
-}
-
-function renderMarkdown(source) {
-  const blocks = String(source).split('\n')
-  const out = []
-  let index = 0
-  while (index < blocks.length) {
-    const line = blocks[index]
-    if (line.startsWith('```')) {
-      const body = []
-      index += 1
-      while (index < blocks.length && !blocks[index].startsWith('```')) body.push(blocks[index++])
-      index += 1
-      out.push(h('pre', null, h('code', null, body.join('\n'))))
-      continue
-    }
-    const heading = /^(#{1,3})\s+(.*)$/.exec(line)
-    if (heading !== null) {
-      const level = heading[1].length + 1
-      out.push(h(`h${level}`, null, ...parseInline(heading[2])))
-      index += 1
-      continue
-    }
-    if (line.startsWith('|')) {
-      const rows = []
-      while (index < blocks.length && blocks[index].startsWith('|')) rows.push(blocks[index++])
-      const cells = rows
-        .filter((row) => !/^\|\s*-/.test(row))
-        .map((row) => row.split('|').slice(1, -1).map((cell) => cell.trim()))
-      const [head, ...body] = cells
-      out.push(h('table', null,
-        h('tr', null, head.map((cell, i) => h('th', { key: i }, cell))),
-        body.map((row, i) => h('tr', { key: i }, row.map((cell, j) => h('td', { key: j }, cell))))))
-      continue
-    }
-    if (line.startsWith('- ')) {
-      const items = []
-      while (index < blocks.length && blocks[index].startsWith('- ')) items.push(blocks[index++].slice(2))
-      out.push(h('ul', null, items.map((item, i) => h('li', { key: i }, ...parseInline(item)))))
-      continue
-    }
-    if (line.trim() === '') {
-      index += 1
-      continue
-    }
-    const paragraph = []
-    while (index < blocks.length && blocks[index].trim() !== '' && !/^(#{1,3}\s|[-|]|```)/.test(blocks[index])) paragraph.push(blocks[index++])
-    out.push(h('p', null, ...parseInline(paragraph.join(' '))))
-  }
-  return out
-}
-
 /* ── load the shipped bundle and render the two surfaces ───────────────── */
 
 const { react, render } = createReact()
 let exports
-const lookup = (name) => {
-  if (name === 'react') return react
-  if (name === '@deepseek-ai/dsh-client-ui-primitives') {
-    return { MarkdownText: (props) => h('div', null, ...renderMarkdown(props.text)) }
-  }
-  return undefined
-}
+const lookup = (name) => (name === 'react' ? react : undefined)
 globalThis.window = { __ModuleLoader__: { load: ({ factory }) => { exports = factory(lookup) } } }
 new Function('window', code)(globalThis.window)
 
@@ -126,27 +51,8 @@ const props = { t, sessionId: '2af261e0-1c1a-4f2e-9a1d-1a2b3c4d5e6f', readPlans:
 
 render(exports.PlansPanel, props)
 await flush()
-const firstPanel = expand(render(exports.PlansPanel, props).tree)
-// open the newest plan, the way a reader would
-const head = find(firstPanel, (node) => node.props?.className?.includes?.('plans-plan-head'))
-head.props.onClick()
 const panel = expand(render(exports.PlansPanel, props).tree)
-
 const page = expand(render(exports.PlansPage, props).tree)
-
-function find(node, predicate) {
-  if (node === null || node === undefined) return undefined
-  if (Array.isArray(node)) {
-    for (const child of node) {
-      const hit = find(child, predicate)
-      if (hit !== undefined) return hit
-    }
-    return undefined
-  }
-  if (typeof node !== 'object') return undefined
-  if (predicate(node)) return node
-  return find(node.props?.children, predicate)
-}
 
 /* ── serialize ─────────────────────────────────────────────────────────── */
 
@@ -234,18 +140,6 @@ const tokens = `
   .frame--page { width: 1440px; height: auto; }
   .caption { font-size: 11.5px; color: var(--dsw-alias-label-tertiary); margin: 0 0 8px; }
   .shots { display: flex; flex-direction: column; gap: 28px; align-items: flex-start; }
-  /* preview-only: the host styles markdown itself, this approximates its look */
-  .plans-doc h2 { font-size: 13px; font-weight: 600; margin: 12px 0 5px; }
-  .plans-doc h2:first-child { margin-top: 0; }
-  .plans-doc h3 { font-size: 12.5px; font-weight: 600; margin: 10px 0 4px; }
-  .plans-doc p { margin: 0 0 7px; }
-  .plans-doc ul { margin: 0 0 7px; padding-left: 16px; }
-  .plans-doc code { font-family: ui-monospace, Consolas, monospace; font-size: 11.4px; background: rgba(127, 127, 127, 0.14); border-radius: 4px; padding: 1px 4px; }
-  .plans-doc pre { margin: 0 0 8px; padding: 8px 10px; border-radius: 8px; background: rgba(127, 127, 127, 0.12); overflow: auto; }
-  .plans-doc pre code { background: none; padding: 0; }
-  .plans-doc table { width: 100%; border-collapse: collapse; margin: 0 0 8px; font-size: 11.8px; }
-  .plans-doc th { text-align: left; font-size: 11px; padding: 4px 6px; border-bottom: 1px solid var(--dsw-alias-border-l2); }
-  .plans-doc td { padding: 4px 6px; border-bottom: 1px solid var(--dsw-alias-border-l1); }
 `
 
 function pageFor(theme, shots) {

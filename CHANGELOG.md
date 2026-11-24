@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.4.0
+
+Plans are read in the built-in viewer, never in the list.
+
+- A row is one button: a click opens the plan in its own viewer tab. Nothing is drawn in the list, so the plugin no longer ships a markdown renderer, a fallback renderer, or the label sets they needed.
+- Expansion, chevrons and the second in-row button are gone together with the card body. `Open in the viewer` is not a separate action any more — the whole row is the action.
+- `Open the plans page` moved into the pane's header, which is where the way to the page still belongs.
+- A refusal — no built-in right Sidebar, no `plan` tab type, a plan without a heading — prints under the card; the click is never silent.
+- Review feedback is no longer shown in the list: a card keeps the title, the outcome and the time.
+- Tests follow the new shape: a row hands over its own plan, the list draws no document, and a row holds no nested control.
+
+## 0.3.0
+
+`Open in the viewer` moves into the plan's own row, so a long plan no longer has to be expanded and scrolled to be handed off.
+
+- The viewer button is an icon at the row's right edge, just after the chevron, with the action's name in its tooltip and accessible name. It sits on every row, open or closed, and opens the plan without expanding the card.
+- The row is a container with two buttons — the expander and the viewer — instead of one button spanning the row, so no control is nested inside another. `aria-expanded` and `aria-controls` stay on the expander, and the row's padding moved inside it, so a click on the row's margins still expands the plan.
+- A viewer refusal prints under the row rather than at the end of the plan, so it is visible with the card closed as well.
+- `Open the plans page` stays with the expanded card.
+- The approved mock and the design notes follow the same row.
+
 ## 0.2.2
 
 A click reads the plan again, and the built-in Sidebar tab registers on DSH 0.2.3.

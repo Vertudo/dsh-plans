@@ -3,7 +3,8 @@
  *
  * Two columns on a wide pane — the list on the left, the outcome mix and the
  * Session under it on the right — and one column when the column gets narrow.
- * The newest plan starts open; closing it leaves the list as it is.
+ * A row opens its plan in the built-in viewer; the page lists plans and never
+ * draws one.
  */
 import { createElement as h, useState } from 'react'
 import {
@@ -69,25 +70,15 @@ function SessionCard({ plans, sessionId, now, locale, t }) {
 }
 
 export function PlansPage(props) {
-  const { t, sessionId, readPlans, openPlan, canOpenPlan, openPanel, canOpenPanel } = props
+  const { t, sessionId, readPlans, openPlan, openPanel, canOpenPanel } = props
   const { status, plans, error, loadedAt, reload } = usePlans({ sessionId, readPlans })
   const { filter, setFilter, options, visible } = usePlanFilter(plans)
-  const [picked, setPicked] = useState(undefined)
   const [failed, setFailed] = useState(null)
   const counts = countByStatus(plans)
   const ready = status === 'ready'
   const now = Date.now()
   const locale = localeName()
 
-  // `undefined` means "follow the newest plan"; a click pins one or closes all.
-  const openId = picked === undefined ? plans[0]?.callId : picked
-  const toggle = (callId) => {
-    setFailed(null)
-    setPicked((current) => {
-      const active = current === undefined ? plans[0]?.callId : current
-      return active === callId ? null : callId
-    })
-  }
   const failOpen = (callId, reason) => {
     setFailed(callId)
     warnOpenFailed(callId, reason)
@@ -108,13 +99,12 @@ export function PlansPage(props) {
     body = h('ol', { className: 'plans-list' }, visible.map((plan) => h(PlanCard, {
       key: plan.callId,
       plan,
-      open: openId === plan.callId,
-      onToggle: toggle,
-      onOpen: typeof openPlan === 'function' ? (callId) => openPlan(callId, failOpen) : undefined,
-      onCanOpen: canOpenPlan,
+      onOpen: typeof openPlan === 'function' ? (callId) => {
+        setFailed(null)
+        openPlan(callId, failOpen)
+      } : undefined,
       openFailed: failed === plan.callId,
       t,
-      variant: 'page',
     })))
   }
 

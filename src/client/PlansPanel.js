@@ -2,13 +2,13 @@
  * The compact surface: the right sidebar pane and the better-sidebar tab.
  *
  * Header, outcome mix, filter chips and the list — in that order, at any width.
- * A row expands in place, so reading a plan never depends on the sidebar
- * registry that hosts the pane.
+ * A row is a button that hands its plan to the built-in viewer; the pane does
+ * not read plans itself.
  *
- * The viewer is the second way in and may be missing: when the pane cannot reach
- * the built-in Sidebar, the card simply does not offer it. A viewer that is
- * there and then refuses the plan prints one line under the text — the click is
- * never silent.
+ * The viewer may be missing: when the pane cannot reach the built-in Sidebar,
+ * the row still answers and prints one line under itself instead of swallowing
+ * the click. The link to the page beside Chat moves into the header, because a
+ * row no longer has a body to carry it.
  */
 import { createElement as h, useState } from 'react'
 import {
@@ -18,10 +18,12 @@ import {
   FilterEmpty,
   IconButton,
   KpiRow,
+  OpenIcon,
   PlanCard,
   RefreshIcon,
   SkeletonList,
   SummaryBar,
+  opens,
 } from './components.js'
 import { countByStatus } from './summary.js'
 import { usePlanFilter, usePlans } from './usePlans.js'
@@ -34,10 +36,9 @@ function warnOpenFailed(callId, reason) {
 }
 
 export function PlansPanel(props) {
-  const { t, sessionId, readPlans, openPlan, canOpenPlan, openPage, canOpenPage } = props
+  const { t, sessionId, readPlans, openPlan, openPage, canOpenPage } = props
   const { status, plans, error, reload } = usePlans({ sessionId, readPlans })
   const { filter, setFilter, options, visible } = usePlanFilter(plans)
-  const [expanded, setExpanded] = useState(null)
   const [failed, setFailed] = useState(null)
   const counts = countByStatus(plans)
   const ready = status === 'ready'
@@ -56,18 +57,12 @@ export function PlansPanel(props) {
     body = h('ol', { className: 'plans-list' }, visible.map((plan) => h(PlanCard, {
       key: plan.callId,
       plan,
-      open: expanded === plan.callId,
-      onToggle: (callId) => {
+      onOpen: typeof openPlan === 'function' ? (callId) => {
         setFailed(null)
-        setExpanded((current) => (current === callId ? null : callId))
-      },
-      onOpen: typeof openPlan === 'function' ? (callId) => openPlan(callId, failOpen) : undefined,
-      onCanOpen: canOpenPlan,
-      onOpenPage: openPage,
-      onCanOpenPage: canOpenPage,
+        openPlan(callId, failOpen)
+      } : undefined,
       openFailed: failed === plan.callId,
       t,
-      variant: 'panel',
     })))
   }
 
@@ -81,6 +76,10 @@ export function PlansPanel(props) {
       h('span', { className: 'plans-title-text' }, t('tab.title')),
       plans.length > 0 ? h('span', { className: 'plans-count' }, String(plans.length)) : null),
     h('div', { className: 'plans-head-actions' },
+      opens(openPage, canOpenPage) ? h(IconButton, {
+        label: t('panel.openPage'),
+        onClick: openPage,
+      }, h(OpenIcon)) : null,
       h(IconButton, { label: t('panel.refresh'), onClick: reload }, h(RefreshIcon)))),
   plans.length > 0 ? h('div', { className: 'plans-summary' }, h(SummaryBar, { counts, t }), h(KpiRow, { counts, t })) : null,
   options.length > 1 ? h(FilterChips, { options, value: filter, onChange: setFilter, t }) : null,

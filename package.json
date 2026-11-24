@@ -1,6 +1,6 @@
 {
   "name": "dsh-plans",
-  "version": "0.2.2",
+  "version": "0.4.0",
   "description": "Plan history for DeepSeek Harness: every plan submitted in the current Session — in the right sidebar and on a page beside Chat.",
   "icon": "icon.svg",
   "type": "module",

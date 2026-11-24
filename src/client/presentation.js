@@ -39,8 +39,6 @@ export const en = {
   'summary.dismissed': 'dismissed',
   'summary.unknown': 'no outcome',
 
-  'feedback.title': 'Review feedback',
-
   'error.title': 'Could not read the Session',
   'error.title.session': 'This page has no Session',
   'error.body.session': 'Open it from a Session tab; the plan list is per Session.',
@@ -60,13 +58,6 @@ export const en = {
   'page.session.imported': 'Imported',
   'page.session.first': 'First plan',
   'page.session.note': 'The plugin reads the Session log and never writes to it.',
-
-  'md.copy': 'Copy',
-  'md.copied': 'Copied',
-  'md.code': 'Code block',
-  'md.wrap': 'Wrap lines',
-  'md.unwrap': 'Do not wrap',
-  'md.footnotes': 'Footnotes',
 }
 
 export const ru = {
@@ -109,8 +100,6 @@ export const ru = {
   'summary.dismissed': 'отклонено',
   'summary.unknown': 'без итога',
 
-  'feedback.title': 'Замечания ревью',
-
   'error.title': 'Не удалось прочитать журнал',
   'error.title.session': 'Страница без сессии',
   'error.body.session': 'Откройте её из вкладки сессии: список планов у каждой сессии свой.',
@@ -130,11 +119,4 @@ export const ru = {
   'page.session.imported': 'Импортировано',
   'page.session.first': 'Первый план',
   'page.session.note': 'Плагин читает журнал сессии и ничего в него не пишет.',
-
-  'md.copy': 'Копировать',
-  'md.copied': 'Скопировано',
-  'md.code': 'Блок кода',
-  'md.wrap': 'Переносить строки',
-  'md.unwrap': 'Не переносить',
-  'md.footnotes': 'Сноски',
 }

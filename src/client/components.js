@@ -4,9 +4,12 @@
  * Plain `createElement` calls over the class names in `panel.css`: nothing here
  * reaches for a host service, so the same piece renders in a sidebar pane, in
  * the bottom workbench and in a center-column view.
+ *
+ * A plan is never drawn here. The list says which plans exist and the built-in
+ * viewer says what a plan contains; a click hands the plan over and a refusal is
+ * printed under the row.
  */
 import { createElement as h } from 'react'
-import { markdownRenderer, renderPlan } from './markdown.js'
 import { segments, timeLabel } from './summary.js'
 
 const TONE = { approved: 'ok', revise: 'warn', dismissed: 'dismissed', unknown: 'unknown' }
@@ -59,8 +62,13 @@ export function RefreshIcon(props) {
   ], props)
 }
 
-export function ChevronIcon(props) {
-  return icon([h('path', { key: 'v', d: 'M4 6.5 8 10.5 12 6.5' })], props)
+/** Open a plan somewhere else: a frame with an arrow out of it. */
+export function OpenIcon(props) {
+  return icon([
+    h('path', { key: 'frame', d: 'M12.5 9v2.5a1.5 1.5 0 0 1-1.5 1.5H4.5A1.5 1.5 0 0 1 3 11.5v-6A1.5 1.5 0 0 1 4.5 4H7' }),
+    h('path', { key: 'corner', d: 'M9.5 2.5h4v4' }),
+    h('path', { key: 'diagonal', d: 'M6.5 9.5 13.4 2.6' }),
+  ], props)
 }
 
 export function PlanIcon() {
@@ -133,58 +141,16 @@ export function FilterChips({ options, value, onChange, t }) {
     }, t(`status.${option.id}`), h('span', null, String(option.count)))))
 }
 
-export function Feedback({ text, t }) {
-  return h('div', { className: 'plans-feedback' }, h('b', null, t('feedback.title')), text)
-}
-
 /**
- * The plan document: the host's own markdown renderer when it is reachable — the
- * same `MarkdownText` the built-in plan viewer uses, so the text is the same one
- * — and the plugin's own renderer when it is not. There is no branch without a
- * document: a click must always have something to show, and raw markdown is
- * never printed either way.
+ * One plan. The whole row is a single button: it hands the plan to the built-in
+ * viewer, which is where a plan is read. Nothing is drawn in place and nothing
+ * expands, so a long plan never has to be scrolled through to be reached.
+ *
+ * The viewer can refuse the plan — no right Sidebar, no tab type claiming the
+ * address, a plan the viewer cannot resolve — and the refusal prints under the
+ * row instead of leaving the click unanswered.
  */
-export function PlanDoc({ plan, t, variant }) {
-  const className = variant === 'panel' ? 'plans-doc plans-doc--panel' : 'plans-doc'
-  const Markdown = markdownRenderer()
-  if (Markdown === null) return h('div', { className }, renderPlan(plan.markdown))
-  const labels = {
-    code: {
-      copyLabel: t('md.copy'),
-      copiedLabel: t('md.copied'),
-      toolbarLabels: { codeLabel: t('md.code'), wrapLabel: t('md.wrap'), unwrapLabel: t('md.unwrap') },
-    },
-    footnotes: t('md.footnotes'),
-  }
-  return h('div', { className }, h(Markdown, { text: plan.markdown, labels }))
-}
-
-/**
- * One plan. A click always reads the plan in place, in whichever column the card
- * stands; the built-in viewer is the second way in, offered only where the
- * Sidebar can really take the plan, and a refusal prints under the text instead
- * of leaving the click unanswered.
- */
-export function PlanCard({
-  plan,
-  open,
-  onToggle,
-  onOpen,
-  onCanOpen,
-  onOpenPage,
-  onCanOpenPage,
-  openFailed,
-  t,
-  variant,
-}) {
-  const renderer = markdownRenderer() === null ? 'lite' : 'host'
-  // The built-in viewer takes a plan's identity from its first heading and has
-  // nothing to show for a plan without one, so such a plan is readable here and
-  // the viewer is not offered at all.
-  const viewable = typeof plan.title === 'string' && plan.title !== ''
-  const canOpen = viewable && opens(onOpen, onCanOpen)
-  const canPage = variant === 'panel' && opens(onOpenPage, onCanOpenPage)
-
+export function PlanCard({ plan, onOpen, openFailed, t }) {
   const meta = [h('span', { key: 'n' }, `#${plan.n}`)]
   const separator = (key) => h('span', { key: `sep-${key}`, className: 'plans-sep', 'aria-hidden': 'true' }, '·')
   const time = timeLabel(plan.time, Date.now(), localeName(), t('time.yesterday'))
@@ -193,60 +159,29 @@ export function PlanCard({
   if (plan.source === 'claude') meta.push(separator('source'), h('span', { key: 'source' }, t('panel.imported')))
 
   const title = typeof plan.title === 'string' && plan.title !== '' ? plan.title : t('panel.untitled', { n: plan.n })
-  const expanded = open === true
+  const content = [
+    h(StatusDot, { status: plan.status }),
+    h('span', { className: 'plans-plan-main' },
+      h('span', { className: 'plans-plan-title' }, title),
+      h('span', { className: 'plans-plan-meta' }, meta)),
+  ]
 
-  const head = h('button', {
-    type: 'button',
-    className: 'plans-plan-head',
-    'aria-expanded': expanded ? 'true' : 'false',
-    onClick: () => {
-      if (typeof onToggle === 'function') onToggle(plan.callId)
-    },
-  },
-  h(StatusDot, { status: plan.status }),
-  h('span', { className: 'plans-plan-main' },
-    h('span', { className: 'plans-plan-title' }, title),
-    h('span', { className: 'plans-plan-meta' }, meta)),
-  h(ChevronIcon, { className: 'plans-chevron' }))
-
-  let body = null
-  if (expanded) {
-    const actions = []
-    if (canOpen) {
-      actions.push(h('button', {
-        key: 'open',
-        type: 'button',
-        className: 'plans-btn',
-        onClick: (event) => {
-          event.stopPropagation()
-          onOpen(plan.callId)
-        },
-      }, t('panel.open')))
-    }
-    if (canPage) {
-      actions.push(h('button', {
-        key: 'page',
-        type: 'button',
-        className: 'plans-btn plans-btn--quiet',
-        onClick: (event) => {
-          event.stopPropagation()
-          onOpenPage()
-        },
-      }, t('panel.openPage')))
-    }
-    const parts = []
-    if (typeof plan.feedback === 'string' && plan.feedback !== '') parts.push(h(Feedback, { key: 'feedback', text: plan.feedback, t }))
-    parts.push(h(PlanDoc, { key: 'doc', plan, t, variant }))
-    if (actions.length > 0) parts.push(h('div', { key: 'actions', className: 'plans-actions' }, actions))
-    if (openFailed === true) parts.push(h('p', { key: 'failed', className: 'plans-open-failed', role: 'alert' }, t('panel.openFailed')))
-    body = h('div', { className: 'plans-plan-body' }, parts)
-  }
+  // One button, no controls inside it: the row does one thing. Without an opener
+  // there is nothing to do, so the row is plain text rather than a dead button.
+  const head = typeof onOpen === 'function'
+    ? h('button', {
+      type: 'button',
+      className: 'plans-plan-head',
+      onClick: () => onOpen(plan.callId),
+    }, content)
+    : h('div', { className: 'plans-plan-head plans-plan-head--static' }, content)
 
   return h('li', {
-    className: expanded ? 'plans-plan plans-plan--open' : 'plans-plan',
+    className: 'plans-plan',
     'data-status': plan.status,
-    'data-renderer': renderer,
-  }, head, body)
+  },
+  head,
+  openFailed === true ? h('p', { key: 'failed', className: 'plans-open-failed', role: 'alert' }, t('panel.openFailed')) : null)
 }
 
 export function EmptyState({ t }) {
