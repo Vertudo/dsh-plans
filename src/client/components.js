@@ -6,7 +6,7 @@
  * the bottom workbench and in a center-column view.
  */
 import { createElement as h } from 'react'
-import { markdownRenderer } from './markdown.js'
+import { markdownRenderer, renderPlan } from './markdown.js'
 import { segments, timeLabel } from './summary.js'
 
 const TONE = { approved: 'ok', revise: 'warn', dismissed: 'dismissed', unknown: 'unknown' }
@@ -14,6 +14,19 @@ const TONE = { approved: 'ok', revise: 'warn', dismissed: 'dismissed', unknown: 
 /** Which colour a row's outcome takes. */
 export function toneOf(status) {
   return TONE[status] ?? 'unknown'
+}
+
+/**
+ * Whether an action can really run.
+ *
+ * A callback alone is not an answer: the surfaces hand over openers that exist
+ * only when the built-in right Sidebar does, so the owner passes a getter too and
+ * the component asks it. Without a getter the callback decides, which keeps
+ * renderers that supply a plain stub working.
+ */
+export function opens(action, can) {
+  if (typeof action !== 'function') return false
+  return typeof can === 'function' ? can() === true : true
 }
 
 /** The interface language for dates; the host locale service is not on this path. */
@@ -125,15 +138,16 @@ export function Feedback({ text, t }) {
 }
 
 /**
- * The plan document, drawn by the host's own markdown renderer — the same
- * `MarkdownText` the built-in plan viewer uses, so the text is the same one.
- * When that module is not reachable there is no raw-text fallback: `PlanCard`
- * turns the card into "open in the viewer" instead.
+ * The plan document: the host's own markdown renderer when it is reachable — the
+ * same `MarkdownText` the built-in plan viewer uses, so the text is the same one
+ * — and the plugin's own renderer when it is not. There is no branch without a
+ * document: a click must always have something to show, and raw markdown is
+ * never printed either way.
  */
 export function PlanDoc({ plan, t, variant }) {
-  const Markdown = markdownRenderer()
-  if (Markdown === null) return null
   const className = variant === 'panel' ? 'plans-doc plans-doc--panel' : 'plans-doc'
+  const Markdown = markdownRenderer()
+  if (Markdown === null) return h('div', { className }, renderPlan(plan.markdown))
   const labels = {
     code: {
       copyLabel: t('md.copy'),
@@ -146,13 +160,30 @@ export function PlanDoc({ plan, t, variant }) {
 }
 
 /**
- * One plan. Clicking it reads the plan in place when the host renderer is
- * reachable; otherwise the card is a single action that opens the built-in plan
- * viewer, and no markdown is printed.
+ * One plan. A click always reads the plan in place, in whichever column the card
+ * stands; the built-in viewer is the second way in, offered only where the
+ * Sidebar can really take the plan, and a refusal prints under the text instead
+ * of leaving the click unanswered.
  */
-export function PlanCard({ plan, open, onToggle, onOpen, onOpenPage, t, variant }) {
-  const inline = markdownRenderer() !== null
-  const canOpen = typeof onOpen === 'function'
+export function PlanCard({
+  plan,
+  open,
+  onToggle,
+  onOpen,
+  onCanOpen,
+  onOpenPage,
+  onCanOpenPage,
+  openFailed,
+  t,
+  variant,
+}) {
+  const renderer = markdownRenderer() === null ? 'lite' : 'host'
+  // The built-in viewer takes a plan's identity from its first heading and has
+  // nothing to show for a plan without one, so such a plan is readable here and
+  // the viewer is not offered at all.
+  const viewable = typeof plan.title === 'string' && plan.title !== ''
+  const canOpen = viewable && opens(onOpen, onCanOpen)
+  const canPage = variant === 'panel' && opens(onOpenPage, onCanOpenPage)
 
   const meta = [h('span', { key: 'n' }, `#${plan.n}`)]
   const separator = (key) => h('span', { key: `sep-${key}`, className: 'plans-sep', 'aria-hidden': 'true' }, '·')
@@ -162,23 +193,21 @@ export function PlanCard({ plan, open, onToggle, onOpen, onOpenPage, t, variant 
   if (plan.source === 'claude') meta.push(separator('source'), h('span', { key: 'source' }, t('panel.imported')))
 
   const title = typeof plan.title === 'string' && plan.title !== '' ? plan.title : t('panel.untitled', { n: plan.n })
-  const expanded = inline && open
+  const expanded = open === true
 
   const head = h('button', {
     type: 'button',
     className: 'plans-plan-head',
-    ...(inline ? { 'aria-expanded': expanded ? 'true' : 'false' } : {}),
-    ...(inline ? {} : { title: canOpen ? t('panel.open') : undefined }),
+    'aria-expanded': expanded ? 'true' : 'false',
     onClick: () => {
-      if (inline) onToggle(plan.callId)
-      else if (canOpen) onOpen(plan.callId)
+      if (typeof onToggle === 'function') onToggle(plan.callId)
     },
   },
   h(StatusDot, { status: plan.status }),
   h('span', { className: 'plans-plan-main' },
     h('span', { className: 'plans-plan-title' }, title),
     h('span', { className: 'plans-plan-meta' }, meta)),
-  h(ChevronIcon, { className: inline ? 'plans-chevron' : 'plans-chevron plans-chevron--go' }))
+  h(ChevronIcon, { className: 'plans-chevron' }))
 
   let body = null
   if (expanded) {
@@ -194,7 +223,7 @@ export function PlanCard({ plan, open, onToggle, onOpen, onOpenPage, t, variant 
         },
       }, t('panel.open')))
     }
-    if (variant === 'panel' && typeof onOpenPage === 'function') {
+    if (canPage) {
       actions.push(h('button', {
         key: 'page',
         type: 'button',
@@ -209,13 +238,14 @@ export function PlanCard({ plan, open, onToggle, onOpen, onOpenPage, t, variant 
     if (typeof plan.feedback === 'string' && plan.feedback !== '') parts.push(h(Feedback, { key: 'feedback', text: plan.feedback, t }))
     parts.push(h(PlanDoc, { key: 'doc', plan, t, variant }))
     if (actions.length > 0) parts.push(h('div', { key: 'actions', className: 'plans-actions' }, actions))
+    if (openFailed === true) parts.push(h('p', { key: 'failed', className: 'plans-open-failed', role: 'alert' }, t('panel.openFailed')))
     body = h('div', { className: 'plans-plan-body' }, parts)
   }
 
   return h('li', {
     className: expanded ? 'plans-plan plans-plan--open' : 'plans-plan',
     'data-status': plan.status,
-    'data-reads-inline': inline ? 'true' : 'false',
+    'data-renderer': renderer,
   }, head, body)
 }
 

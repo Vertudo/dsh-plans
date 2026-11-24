@@ -13,6 +13,7 @@ export const en = {
   'panel.imported': 'Claude Code',
   'panel.open': 'Open in the viewer',
   'panel.openPage': 'Open the plans page',
+  'panel.openFailed': 'The built-in viewer did not take the plan; the text above is the plan itself.',
 
   'filters.aria': 'Filter by outcome',
   'filter.empty': 'No plans with this outcome.',
@@ -82,6 +83,7 @@ export const ru = {
   'panel.imported': 'Claude Code',
   'panel.open': 'Открыть в просмотрщике',
   'panel.openPage': 'Открыть страницу планов',
+  'panel.openFailed': 'Штатный просмотрщик план не принял; текст выше — сам план.',
 
   'filters.aria': 'Фильтр по итогу',
   'filter.empty': 'Планов с таким итогом нет.',

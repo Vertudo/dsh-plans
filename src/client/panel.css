@@ -330,9 +330,6 @@
   transition: transform var(--plans-dur) var(--plans-ease);
 }
 
-/* без инлайн-рендера карточка ведёт в просмотрщик: шеврон смотрит вправо */
-.plans-chevron--go { transform: rotate(-90deg); }
-
 .plans-plan--open .plans-chevron { transform: rotate(180deg); }
 
 .plans-plan-body { padding: 0 11px 11px; }
@@ -357,7 +354,7 @@
   opacity: 0.8;
 }
 
-/* план: markdown от хоста или запасной <pre> */
+/* план: markdown от хоста, а без него — собственный рендер `.plans-lite` */
 .plans-doc {
   padding-top: 9px;
   border-top: 1px solid var(--plans-line-1);
@@ -371,6 +368,88 @@
   overflow: auto;
 }
 
+/*
+ * Собственный рендер плана: заголовки, абзацы, списки, цитаты, код.
+ * Нужен, когда общий модуль хоста `@deepseek-ai/dsh-client-ui-primitives`
+ * недоступен: клик по карточке обязан показать план в любом случае.
+ */
+.plans-lite > * + * { margin-top: 8px; }
+
+.plans-lite p { margin: 0; }
+
+.plans-lite h2,
+.plans-lite h3,
+.plans-lite h4,
+.plans-lite h5,
+.plans-lite h6 {
+  margin: 0;
+  color: var(--plans-label-1);
+  font-size: 12.6px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.plans-lite h2 { font-size: 13.2px; }
+
+.plans-lite ul,
+.plans-lite ol {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.plans-lite li + li { margin-top: 3px; }
+
+.plans-lite blockquote {
+  margin: 0;
+  padding-left: 9px;
+  border-left: 2px solid var(--plans-line-3);
+  color: var(--plans-label-3);
+}
+
+.plans-lite blockquote p { margin: 0; }
+
+.plans-lite pre {
+  margin: 0;
+  padding: 8px 9px;
+  overflow: auto;
+  border-radius: var(--plans-radius-sm);
+  background: var(--plans-hover);
+  font-family: var(--plans-mono);
+  font-size: 11.6px;
+  line-height: 1.5;
+}
+
+.plans-lite code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--plans-hover);
+  font-family: var(--plans-mono);
+  font-size: 11.6px;
+}
+
+.plans-lite pre code {
+  padding: 0;
+  background: none;
+  font-size: inherit;
+}
+
+.plans-lite strong {
+  color: var(--plans-label-1);
+  font-weight: 600;
+}
+
+.plans-lite a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.plans-lite hr {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--plans-line-1);
+}
+
 /* строка текста не должна растягиваться на всю широкую колонку */
 .plans-page .plans-doc { max-width: 76ch; }
 
@@ -379,6 +458,13 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+/* отказ просмотрщика: строка вместо тихого клика */
+.plans-open-failed {
+  margin: 0;
+  color: var(--plans-warn);
+  font-size: 11.4px;
 }
 
 .plans-btn {

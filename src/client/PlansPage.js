@@ -16,9 +16,17 @@ import {
   SkeletonList,
   SummaryBar,
   localeName,
+  opens,
 } from './components.js'
 import { STATUS_ORDER, clockTime, countByStatus, dayLabel, timeLabel } from './summary.js'
 import { usePlanFilter, usePlans } from './usePlans.js'
+
+/** One line per refusal in the console; the reader gets the visible line instead. */
+function warnOpenFailed(callId, reason) {
+  if (typeof console === 'object' && console !== null && typeof console.warn === 'function') {
+    console.warn(`dsh-plans: the plan ${callId} did not reach the viewer — ${reason}`)
+  }
+}
 
 function Tile({ status, count, t }) {
   const tone = status === 'approved' ? ' plans-tile--ok' : status === 'revise' ? ' plans-tile--warn' : ''
@@ -61,10 +69,11 @@ function SessionCard({ plans, sessionId, now, locale, t }) {
 }
 
 export function PlansPage(props) {
-  const { t, sessionId, readPlans, openPlan, openPanel } = props
+  const { t, sessionId, readPlans, openPlan, canOpenPlan, openPanel, canOpenPanel } = props
   const { status, plans, error, loadedAt, reload } = usePlans({ sessionId, readPlans })
   const { filter, setFilter, options, visible } = usePlanFilter(plans)
   const [picked, setPicked] = useState(undefined)
+  const [failed, setFailed] = useState(null)
   const counts = countByStatus(plans)
   const ready = status === 'ready'
   const now = Date.now()
@@ -72,10 +81,17 @@ export function PlansPage(props) {
 
   // `undefined` means "follow the newest plan"; a click pins one or closes all.
   const openId = picked === undefined ? plans[0]?.callId : picked
-  const toggle = (callId) => setPicked((current) => {
-    const active = current === undefined ? plans[0]?.callId : current
-    return active === callId ? null : callId
-  })
+  const toggle = (callId) => {
+    setFailed(null)
+    setPicked((current) => {
+      const active = current === undefined ? plans[0]?.callId : current
+      return active === callId ? null : callId
+    })
+  }
+  const failOpen = (callId, reason) => {
+    setFailed(callId)
+    warnOpenFailed(callId, reason)
+  }
 
   const sub = [h('span', { key: 's' }, t('page.subtitle'))]
   if (typeof loadedAt === 'number') {
@@ -94,7 +110,9 @@ export function PlansPage(props) {
       plan,
       open: openId === plan.callId,
       onToggle: toggle,
-      onOpen: openPlan,
+      onOpen: typeof openPlan === 'function' ? (callId) => openPlan(callId, failOpen) : undefined,
+      onCanOpen: canOpenPlan,
+      openFailed: failed === plan.callId,
       t,
       variant: 'page',
     })))
@@ -115,7 +133,7 @@ export function PlansPage(props) {
         h('button', { key: 'reload', type: 'button', className: 'plans-btn', onClick: reload },
           h(RefreshIcon),
           t('panel.refresh')),
-        typeof openPanel === 'function'
+        opens(openPanel, canOpenPanel)
           ? h('button', { key: 'panel', type: 'button', className: 'plans-btn plans-btn--quiet', onClick: openPanel }, t('page.openInPanel'))
           : null)),
     h('div', { className: aside === null ? 'plans-page-grid plans-page-grid--single' : 'plans-page-grid' },

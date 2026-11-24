@@ -10,7 +10,7 @@ Plan mode already renders one submitted plan at a time: it opens a plan tab whil
 
 - **The list.** The right sidebar gets a `Plans` tab: one card per submitted plan, newest first, with the plan number, its outcome and its time.
 - **The mix.** A composition bar and counters split the list by outcome; chips filter it, each with its count.
-- **The plan itself.** A card expands in place and reads the plan through the host's own `MarkdownText` — the same renderer the built-in plan viewer uses — plus the review feedback when the plan was sent back. `Open in the viewer` hands the plan to the built-in plan tab. Raw markdown is never printed: where the renderer is missing, a click opens the viewer instead.
+- **The plan itself.** A card expands in place — always, in any column — and reads the plan plus the review feedback when the plan was sent back. The host's own `MarkdownText` draws it, the same renderer the built-in plan viewer uses; when that module is not reachable, the plugin's own renderer draws it instead. Raw markdown is never printed either way. `Open in the viewer` hands the plan to the built-in plan tab: the button appears only where the Sidebar can really take it, and a refusal prints under the plan.
 - **The page.** A center-column view beside `Chat` and `Trajectory`: filters and cards on the left, the outcome mix and a Session card on the right.
 - **Imported Sessions.** Plans from Claude Code Sessions imported into DSH are read too: they call the same tool under the name `ExitPlanMode`.
 
@@ -34,13 +34,13 @@ Three surfaces, one component:
 - **dsh-better-sidebar** — its own tab list gets a `Plans` tab, no setup needed.
 - **The center column** — a `Plans` view beside `Chat` and `Trajectory`, full width.
 
-A card expands in place, so reading works wherever the pane is. Where the built-in Sidebar exists, the expanded plan also offers to open in the shipped plan viewer, and the page offers `Open in the panel`.
+A card expands in place and reads the plan itself, so a click works in any column and without the built-in Sidebar. Where that Sidebar exists, the expanded plan also offers `Open in the viewer`, and the page offers `Open in the panel`.
 
 ## Use
 
 1. Open the right sidebar in a Session that went through plan mode, or pick the `Plans` view in the header.
 2. In the sidebar, add the `Plans` tab: the add control opens the guide, where `Plans` is one of the entries.
-3. Click a card to read that plan; click it again to close it. `Open in the viewer` hands the plan to the built-in tab.
+3. Click a card to read that plan; click it again to close it. `Open in the viewer` hands the plan to the built-in tab, where that tab is available.
 
 The list is read when the pane opens. Press `Refresh` after a new plan is submitted in the same Session.
 
@@ -50,8 +50,8 @@ A plan is not a Session object: it is a `tool/call` of `exit_plan_mode` whose `p
 
 - `ctx.remote.session.events` and `ctx.remote.session.page` read the committed log page by page, including history older than the first page;
 - `exit_plan_mode` and `ExitPlanMode` calls become cards; the outcomes behind them become the dots, labels and the composition bar;
-- a card renders the plan with `MarkdownText` from the host's shared `@deepseek-ai/dsh-client-ui-primitives`, and falls back to preformatted text when that module is not reachable;
-- the viewer button opens `dsh-resource://plan/<session>/<callId>` — an address the built-in `plan` tab type claims and renders.
+- a card renders the plan with `MarkdownText` from the host's shared `@deepseek-ai/dsh-client-ui-primitives`; when that module is not reachable, `src/client/markdown.js` draws the plan itself — headings, paragraphs, lists, quotes, code blocks;
+- the viewer button opens `dsh-resource://plan/<session>/<callId>` — an address the built-in `plan` tab type claims and renders; a refusal prints under the plan instead of being swallowed.
 
 The visual layer is one stylesheet, `src/client/panel.css`, built from the host's `--dsw-alias-*` tokens. It ships inside the client bundle and is injected as a single `<style>` element, so light and dark follow the app without a second file. The three surfaces register in `sidebar.right.pane.tab`, `betterSidebar.registerTab` and the `conversation.view` slot.
 
@@ -61,7 +61,7 @@ The plugin therefore ships one client module and an empty host half: the row in 
 
 - **Current Session only.** The list covers the Session whose pane or view it is; there is no cross-Session view.
 - **Manual refresh.** A plan submitted while the pane is open appears after `Refresh`; nothing polls the log.
-- **Built-in rendering.** How a plan looks is the host markdown renderer's business; without `MarkdownText` a click opens the plan in the viewer and no raw text is printed. If the built-in `plan` tab is ever removed from a deployment, cards still list plans but cannot open them in the viewer.
+- **Rendering.** How a plan looks is the host markdown renderer's business; without `MarkdownText` the plugin's own renderer draws it, so a click still reads the plan and no raw text is printed. If the built-in `plan` tab is ever removed from a deployment, cards still list and read plans, and the viewer offer disappears.
 - **Expanded state is not saved.** Which cards are open lives in the pane's own state and is lost on reload.
 - **Imported sessions.** A plan from an imported Claude Code Session lists with the `Claude Code` mark; the built-in viewer resolves it from the same Session history.
 

@@ -2,10 +2,11 @@
  * The shipped client bundle, rendered.
  *
  * The package carries no React, so these tests mount the bundle through the
- * harness in `harness.mjs`: loading state, ready state, reading a plan in place,
- * the viewer hand-off when the host renderer is missing, the outcome filter, and
- * both failures. What they protect is the structure a reader sees — the classes
- * `panel.css` paints, and that no raw markdown is ever printed.
+ * harness in `harness.mjs`: loading state, ready state, reading a plan in place
+ * with the host renderer and with the plugin's own, the refusal of a viewer that
+ * cannot take the plan, the outcome filter, and both failures. What they protect
+ * is the structure a reader sees — the classes `panel.css` paints, and that no
+ * raw markdown is ever printed.
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -102,7 +103,7 @@ test('with the host renderer a click reads the plan in place, feedback included'
   assert.equal(findAll(opened, (node) => hasClass(node, 'plans-feedback')).length, 1)
 })
 
-test('without the host renderer a click opens the viewer and prints no markdown', async () => {
+test('without the host renderer a click still reads the plan, drawn by the plugin', async () => {
   const { exports, render } = loadBundle()
   const opened = []
   const props = propsOf({ openPlan: (callId) => opened.push(callId) })
@@ -111,11 +112,55 @@ test('without the host renderer a click opens the viewer and prints no markdown'
   findAll(ready, (node) => hasClass(node, 'plans-plan-head'))[1].props.onClick()
   const after = expand(render(exports.PlansPanel, props).tree)
 
-  assert.deepEqual(opened, ['c3'])
-  assert.equal(findAll(after, (node) => hasClass(node, 'plans-plan--open')).length, 0)
-  assert.equal(findAll(after, (node) => hasClass(node, 'plans-doc')).length, 0)
-  assert.equal(findAll(after, (node) => node.type === 'pre').length, 0)
-  assert.equal(findAll(after, (node) => hasClass(node, 'plans-plan')).length, 4, 'the rows stay')
+  assert.deepEqual(opened, [], 'nothing is handed off: the plan is read in place')
+  assert.equal(findAll(after, (node) => hasClass(node, 'plans-plan--open')).length, 1)
+  const lite = findAll(after, (node) => hasClass(node, 'plans-lite'))
+  assert.equal(lite.length, 1, 'the plugin draws the document itself')
+  assert.match(textOf(lite[0]), /План на доработке/)
+  assert.equal(findAll(after, (node) => node.type === 'pre').length, 0, 'the document is never dumped as raw text')
+  assert.equal(findAll(after, (node) => node.props?.['data-renderer'] === 'lite').length, 4, 'every row says which renderer draws it')
+  assert.equal(findAll(after, (node) => hasClass(node, 'plans-feedback')).length, 1)
+})
+
+test('a plan without a heading is read here and is not offered to the viewer', async () => {
+  const { exports, render } = loadBundle({ primitives: hostPrimitives })
+  const props = propsOf({
+    readPlans: async () => [
+      { callId: 'c1', n: 1, title: undefined, status: 'approved', source: 'dsh', time: Date.now(), markdown: 'Без заголовка, но с текстом.' },
+    ],
+  })
+  const ready = await mount(render, exports.PlansPanel, props)
+
+  findAll(ready, (node) => hasClass(node, 'plans-plan-head'))[0].props.onClick()
+  const after = expand(render(exports.PlansPanel, props).tree)
+
+  assert.equal(findAll(after, (node) => hasClass(node, 'plans-plan--open')).length, 1)
+  assert.match(textOf(after), /Без заголовка, но с текстом/)
+  assert.equal(findAll(after, (node) => hasClass(node, 'plans-btn') && textOf(node) === 'panel.open').length, 0, 'the viewer is not offered for a plan it cannot show')
+})
+
+test('a viewer that refuses the plan says so under the text', async () => {
+  const { exports, render } = loadBundle({ primitives: hostPrimitives })
+  const warned = []
+  const original = console.warn
+  console.warn = (message) => warned.push(String(message))
+  try {
+    const props = propsOf({ openPlan: (callId, onFailed) => onFailed(callId, 'an address no type claims') })
+    const ready = await mount(render, exports.PlansPanel, props)
+
+    findAll(ready, (node) => hasClass(node, 'plans-plan-head'))[0].props.onClick()
+    const opened = expand(render(exports.PlansPanel, props).tree)
+    const button = findAll(opened, (node) => hasClass(node, 'plans-btn') && textOf(node) === 'panel.open')[0]
+    assert.ok(button !== undefined, 'the viewer is offered where it can be reached')
+
+    button.props.onClick({ stopPropagation() {} })
+    const after = expand(render(exports.PlansPanel, props).tree)
+    assert.equal(findAll(after, (node) => hasClass(node, 'plans-open-failed')).length, 1)
+    assert.match(textOf(after), /panel\.openFailed/)
+    assert.equal(warned.length, 1, 'the console names the refusal once')
+  } finally {
+    console.warn = original
+  }
 })
 
 test('a chip filters the list without touching the order', async () => {

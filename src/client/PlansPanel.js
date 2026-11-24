@@ -4,6 +4,11 @@
  * Header, outcome mix, filter chips and the list — in that order, at any width.
  * A row expands in place, so reading a plan never depends on the sidebar
  * registry that hosts the pane.
+ *
+ * The viewer is the second way in and may be missing: when the pane cannot reach
+ * the built-in Sidebar, the card simply does not offer it. A viewer that is
+ * there and then refuses the plan prints one line under the text — the click is
+ * never silent.
  */
 import { createElement as h, useState } from 'react'
 import {
@@ -21,13 +26,26 @@ import {
 import { countByStatus } from './summary.js'
 import { usePlanFilter, usePlans } from './usePlans.js'
 
+/** One line per refusal in the console; the reader gets the visible line instead. */
+function warnOpenFailed(callId, reason) {
+  if (typeof console === 'object' && console !== null && typeof console.warn === 'function') {
+    console.warn(`dsh-plans: the plan ${callId} did not reach the viewer — ${reason}`)
+  }
+}
+
 export function PlansPanel(props) {
-  const { t, sessionId, readPlans, openPlan, openPage } = props
+  const { t, sessionId, readPlans, openPlan, canOpenPlan, openPage, canOpenPage } = props
   const { status, plans, error, reload } = usePlans({ sessionId, readPlans })
   const { filter, setFilter, options, visible } = usePlanFilter(plans)
   const [expanded, setExpanded] = useState(null)
+  const [failed, setFailed] = useState(null)
   const counts = countByStatus(plans)
   const ready = status === 'ready'
+
+  const failOpen = (callId, reason) => {
+    setFailed(callId)
+    warnOpenFailed(callId, reason)
+  }
 
   let body
   if (status === 'loading' && plans.length === 0) body = h(SkeletonList, { t })
@@ -39,9 +57,15 @@ export function PlansPanel(props) {
       key: plan.callId,
       plan,
       open: expanded === plan.callId,
-      onToggle: (callId) => setExpanded((current) => (current === callId ? null : callId)),
-      onOpen: openPlan,
+      onToggle: (callId) => {
+        setFailed(null)
+        setExpanded((current) => (current === callId ? null : callId))
+      },
+      onOpen: typeof openPlan === 'function' ? (callId) => openPlan(callId, failOpen) : undefined,
+      onCanOpen: canOpenPlan,
       onOpenPage: openPage,
+      onCanOpenPage: canOpenPage,
+      openFailed: failed === plan.callId,
       t,
       variant: 'panel',
     })))
