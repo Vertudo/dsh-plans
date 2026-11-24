@@ -19,10 +19,12 @@ The pane only reads the Session log. It never writes to the Session and never as
 ## Install
 
 ```sh
-dsh plugin --profile <profile> add ./dsh-plans
+dsh plugin --profile <profile> add dsh-plans
 ```
 
-or add the bundle from the Plugins page. Restart DSH (or reload the window) so the browser picks up the client half.
+From a checkout pass `./dsh-plans` instead, and the repository works directly: `dsh plugin --profile <profile> add https://github.com/Vertudo/dsh-plans`. The same bundle installs from the Plugins page, where the add dialog takes a package name, a Git address, a tarball, or a local path.
+
+Requires DSH `>= 0.2.2 < 0.3.0`, declared as `engines.dsh`; an incompatible release is refused at installation and at profile start. To update, remove the bundle and add it again — installing over an installed package reports `already-installed`. Restart DSH (or reload the window) so the browser picks up the client half.
 
 ## Where it appears
 

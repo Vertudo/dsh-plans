@@ -2,3 +2,4 @@ node_modules/
 *.log
 .ref/
 design/preview-*.html
+.review-tmp/

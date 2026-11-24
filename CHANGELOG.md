@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+- Declares the DSH releases it supports in `engines.dsh` (`>= 0.2.2 < 0.3.0`). Installation and profile start now refuse an incompatible DSH instead of loading the plugin into it; verified on 0.2.2-rc.5 and 0.2.3-alpha.2.
+- Published to npm as `dsh-plans`, so `dsh plugin add dsh-plans` installs the prebuilt package. The GitHub install keeps working.
+- No behaviour change.
+
 ## 0.2.0
 
 The list gets a design of its own, and a second surface.

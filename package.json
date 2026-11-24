@@ -1,6 +1,6 @@
 {
   "name": "dsh-plans",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Plan history for DeepSeek Harness: every plan submitted in the current Session — in the right sidebar and on a page beside Chat.",
   "icon": "icon.svg",
   "type": "module",
@@ -48,8 +48,12 @@
   "bugs": {
     "url": "https://github.com/Vertudo/dsh-plans/issues"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
-    "node": ">=22"
+    "node": ">=22",
+    "dsh": ">=0.2.2 <0.3.0"
   },
   "dsh": {
     "bundle": {
